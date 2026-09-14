@@ -80,12 +80,17 @@ La forma más simple sin instalar nada:
 3. A partir de ahí, todo lo que cargue uno aparece **al instante** en el
    celular del otro (sin botón de actualizar ni demoras — la sincronización
    sigue siendo en tiempo real), incluyendo el saldo del **fondo común**.
-4. En **Tareas** ahora pueden marcar una actividad como **"Diaria"** y
-   ponerle un **horario**: ese horario dispara una notificación del
-   navegador para no olvidarse (la app va a pedir permiso de notificaciones
-   la primera vez que carguen una tarea con horario — hay que aceptarlo).
-   Las tareas diarias se "reinician" solas cada día a las 00:00, sin que
-   nadie tenga que volver a cargarlas.
+4. En **Tareas** ahora pueden marcar una actividad como **"Diaria"** o
+   **"Días específicos"** (por ejemplo, todos los martes y jueves) y
+   ponerle un **rango horario** ("Desde" / "Hasta", ambos opcionales). Ese
+   horario de inicio dispara una notificación del navegador para no
+   olvidarse (la app va a pedir permiso de notificaciones la primera vez
+   que carguen una tarea con horario — hay que aceptarlo). Las tareas
+   diarias o de días específicos se "reinician" solas en las fechas que
+   corresponda, sin que nadie tenga que volver a cargarlas. Las que son de
+   días específicos y no tocan hoy aparecen igual, más abajo, en
+   "Programadas para otros días", para poder editarlas o borrarlas cuando
+   quieran.
 5. En **Fondo común** (pestaña nueva) pueden registrar aportes y ver el
    saldo compartido en tiempo real. Desde **Gastos**, tildando "Pagar con
    fondo común", un gasto se descuenta automáticamente de ese saldo.

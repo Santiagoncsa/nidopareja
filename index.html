@@ -92,6 +92,10 @@
   .icon-btn:hover { color: var(--bad); background: var(--surface-muted); }
   .check-btn { border: 1.5px solid var(--line); background: var(--surface); width: 22px; height: 22px; border-radius: 6px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0; }
   .check-btn.checked { background: var(--good); border-color: var(--good); color: #fff; }
+  .day-pill { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 30px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.76rem; cursor: pointer; user-select: none; background: var(--surface); color: var(--ink-muted); }
+  .day-pill input { display: none; }
+  .day-pill.checked { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .schedule-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.4rem; }
 
   .summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
   .summary-card { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; }
@@ -237,11 +241,14 @@
   const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
   const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+  const WEEKDAY_ABBR = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+  const WEEKDAY_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
   const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
   const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const todayWeekday = () => (new Date().getDay() + 6) % 7; // 0 = lunes … 6 = domingo
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   /* ---------- hash de contraseña (SHA-256, para el gate de acceso a la casa) ---------- */
@@ -258,21 +265,28 @@
     Notification.requestPermission().then(() => render());
   }
   function notifiedKey(taskId, dateISO) { return `nido_notified_${taskId}_${dateISO}`; }
+  function taskAppliesToday(t) {
+    if (t.frequency === "dias") return (t.days || []).includes(todayWeekday());
+    return true;
+  }
+  function taskDoneToday(t) {
+    return t.frequency === "unica" ? !!t.done : t.doneDate === todayISO();
+  }
   function checkTaskNotifications() {
     if (!notifSupported || Notification.permission !== "granted") return;
     if (!state.house || !state.me) return;
     const today = todayISO();
     const hm = nowHM();
     state.tasks.forEach((t) => {
-      if (!t.time) return;
-      const isDoneToday = t.frequency === "diaria" ? t.doneDate === today : t.done;
-      if (isDoneToday) return;
-      if (t.time !== hm) return;
+      if (!t.timeStart) return;
+      if (!taskAppliesToday(t)) return;
+      if (taskDoneToday(t)) return;
+      if (t.timeStart !== hm) return;
       const key = notifiedKey(t.id, today);
       if (getLocal(key, false)) return;
       setLocal(key, true);
       try {
-        new Notification("Nido — recordatorio", { body: `${t.title}${t.assignee && t.assignee !== "Cualquiera" ? " · " + t.assignee : ""}`, tag: key });
+        new Notification("Nido — recordatorio", { body: `${t.title}${t.assignee && t.assignee !== "Cualquiera" ? " · " + t.assignee : ""}${t.timeEnd ? ` (hasta ${t.timeEnd})` : ""}`, tag: key });
       } catch (e) {}
     });
   }
@@ -716,76 +730,127 @@
   }
 
   /* ---------- tab: tareas ---------- */
-  function isTaskDoneToday(t) {
-    return t.frequency === "diaria" ? t.doneDate === todayISO() : !!t.done;
+  function scheduleLabel(t) {
+    if (t.frequency === "diaria") return "Diaria";
+    if (t.frequency === "dias") {
+      const days = (t.days || []).slice().sort((a, b) => a - b).map((d) => WEEKDAY_ABBR[d]);
+      return days.length ? days.join(", ") : "Días específicos";
+    }
+    return null;
   }
+  function timeLabel(t) {
+    if (!t.timeStart) return null;
+    return t.timeEnd ? `${t.timeStart}–${t.timeEnd}` : t.timeStart;
+  }
+
   function buildTareasTab() {
     const titleInput = h("input", { id: "input-tarea-title", placeholder: "Ej: Sacar la basura", value: "" });
     const assigneeSelect = h("select", { id: "input-tarea-assignee" }, h("option", {}, "Cualquiera"), ...state.members.map((m) => h("option", {}, m.name)));
-    const frequencySelect = h("select", { id: "input-tarea-frequency" }, h("option", { value: "unica" }, "Única vez"), h("option", { value: "diaria" }, "Diaria"));
-    const timeInput = h("input", { id: "input-tarea-time", type: "time", value: "" });
+    const frequencySelect = h("select", { id: "input-tarea-frequency" },
+      h("option", { value: "unica" }, "Única vez"),
+      h("option", { value: "diaria" }, "Diaria"),
+      h("option", { value: "dias" }, "Días específicos")
+    );
+    const timeStartInput = h("input", { id: "input-tarea-time-start", type: "time", value: "" });
+    const timeEndInput = h("input", { id: "input-tarea-time-end", type: "time", value: "" });
     const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
 
+    const dayCheckboxes = WEEKDAY_ABBR.map((abbr, i) => {
+      const cb = h("input", { type: "checkbox", id: `input-tarea-day-${i}` });
+      const lbl = h("label", { class: "day-pill" }, cb, abbr);
+      cb.addEventListener("input", () => { lbl.classList.toggle("checked", cb.checked); updateAddBtn(); });
+      return lbl;
+    });
+    const daysWrap = h("div", { class: "field", id: "tarea-days-wrap", style: { display: "none" } },
+      h("label", {}, "Días"),
+      h("div", { style: { display: "flex", gap: "0.3rem" } }, ...dayCheckboxes)
+    );
+
+    const updateAddBtn = () => {
+      const hasTitle = titleInput.value.trim().length > 0;
+      const needsDays = frequencySelect.value === "dias";
+      const hasDay = !needsDays || dayCheckboxes.some((lbl) => lbl.querySelector("input").checked);
+      addBtn.disabled = !(hasTitle && hasDay);
+    };
+    titleInput.addEventListener("input", updateAddBtn);
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) add(); });
+    frequencySelect.addEventListener("input", () => {
+      daysWrap.style.display = frequencySelect.value === "dias" ? "block" : "none";
+      updateAddBtn();
+    });
+
     const add = () => {
+      const needsDays = frequencySelect.value === "dias";
+      const days = dayCheckboxes.reduce((acc, lbl, i) => (lbl.querySelector("input").checked ? [...acc, i] : acc), []);
       if (!titleInput.value.trim()) return;
+      if (needsDays && days.length === 0) return;
       const entry = {
         id: uid(), title: titleInput.value.trim(), assignee: assigneeSelect.value,
-        frequency: frequencySelect.value, time: timeInput.value || null,
+        frequency: frequencySelect.value, days: needsDays ? days : [],
+        timeStart: timeStartInput.value || null, timeEnd: timeEndInput.value || null,
         done: false, doneDate: null, createdBy: state.me.name,
       };
       saveList(state.house, "tasks", [entry, ...state.tasks]);
-      if (timeInput.value && notifSupported && Notification.permission === "default") requestNotifPermission();
+      if (timeStartInput.value && notifSupported && Notification.permission === "default") requestNotifPermission();
     };
-    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
-    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
     addBtn.addEventListener("click", add);
+    updateAddBtn();
 
     const toggle = (t) => {
-      if (t.frequency === "diaria") {
-        const nowDone = isTaskDoneToday(t);
-        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, doneDate: nowDone ? null : todayISO() } : x)));
-      } else {
+      if (t.frequency === "unica") {
         saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)));
+      } else {
+        const nowDone = taskDoneToday(t);
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, doneDate: nowDone ? null : todayISO() } : x)));
       }
     };
     const remove = (id) => saveList(state.house, "tasks", state.tasks.filter((t) => t.id !== id));
-    const pending = state.tasks.filter((t) => !isTaskDoneToday(t));
-    const done = state.tasks.filter((t) => isTaskDoneToday(t));
+
+    const todays = state.tasks.filter((t) => taskAppliesToday(t));
+    const pending = todays.filter((t) => !taskDoneToday(t));
+    const done = todays.filter((t) => taskDoneToday(t));
+    const notToday = state.tasks.filter((t) => t.frequency === "dias" && !taskAppliesToday(t));
 
     const form = h("div", { class: "entry-form" },
       h("div", { class: "field grow" }, h("label", {}, "Tarea"), titleInput),
       h("div", { class: "field" }, h("label", {}, "Para"), assigneeSelect),
       h("div", { class: "field" }, h("label", {}, "Repetición"), frequencySelect),
-      h("div", { class: "field" }, h("label", {}, "Horario (opcional)"), timeInput),
+      daysWrap,
+      h("div", { class: "field" }, h("label", {}, "Desde (opcional)"), timeStartInput),
+      h("div", { class: "field" }, h("label", {}, "Hasta (opcional)"), timeEndInput),
       addBtn
     );
 
     const notifBanner = (!notifSupported || Notification.permission === "granted") ? null :
       h("div", { class: "empty-state", style: { textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.85rem 1rem", marginBottom: "1rem" } },
-        h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem" } }, BellIcon(16), h("span", {}, Notification.permission === "denied" ? "Bloqueaste las notificaciones del navegador para este sitio; activalas desde el ícono del candado si querés recordatorios." : "Activá las notificaciones para recibir un aviso a la hora de cada actividad.")),
+        h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem" } }, BellIcon(16), h("span", {}, Notification.permission === "denied" ? "Bloqueaste las notificaciones del navegador para este sitio; activalas desde el ícono del candado si querés recordatorios." : "Activá las notificaciones para recibir un aviso al empezar cada actividad.")),
         Notification.permission === "denied" ? null : h("button", { class: "add-btn", onClick: () => requestNotifPermission() }, "Activar")
       );
 
     const rowMeta = (t) => [
       h("span", {}, t.assignee),
-      t.frequency === "diaria" ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", RepeatIcon(11), "Diaria") : null,
-      t.time ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", BellIcon(11), t.time) : null,
+      scheduleLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", RepeatIcon(11), scheduleLabel(t)) : null,
+      timeLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", BellIcon(11), timeLabel(t)) : null,
     ];
+
+    const taskRow = (t, checked) => h("div", { class: "list-row" + (checked ? " done" : ""), style: { "--row-color": colorFor(t.createdBy) } },
+      h("button", { class: "check-btn" + (checked ? " checked" : ""), onClick: () => toggle(t) }, checked ? CheckIcon(13) : null),
+      h("div", { class: "row-main" }, h("div", { class: "row-title" + (checked ? " strike" : "") }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+      h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+    );
 
     let listBody;
     if (state.tasks.length === 0) {
       listBody = h("div", { class: "empty-state" }, "La lista de tareas está vacía.", h("br"), "Anoten lo que hay que hacer en casa esta semana.");
     } else {
       listBody = h("div", {},
-        ...pending.map((t) => h("div", { class: "list-row", style: { "--row-color": colorFor(t.createdBy) } },
-          h("button", { class: "check-btn", onClick: () => toggle(t) }),
-          h("div", { class: "row-main" }, h("div", { class: "row-title" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
-          h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
-        )),
+        pending.length === 0 && done.length === 0 ? h("div", { class: "empty-state" }, "Nada para hoy en la lista de tareas.") : null,
+        ...pending.map((t) => taskRow(t, false)),
         done.length > 0 ? h("div", { style: { marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Hechas hoy") : null,
-        ...done.map((t) => h("div", { class: "list-row done", style: { "--row-color": colorFor(t.createdBy) } },
-          h("button", { class: "check-btn checked", onClick: () => toggle(t) }, CheckIcon(13)),
-          h("div", { class: "row-main" }, h("div", { class: "row-title strike" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+        ...done.map((t) => taskRow(t, true)),
+        notToday.length > 0 ? h("div", { style: { marginTop: "1.5rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Programadas para otros días") : null,
+        ...notToday.map((t) => h("div", { class: "list-row", style: { "--row-color": colorFor(t.createdBy), opacity: "0.65" } },
+          h("div", { class: "row-main" }, h("div", { class: "row-title" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
           h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
         ))
       );
