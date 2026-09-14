@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#23301F" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Nido" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<title>Nido — organización en pareja</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; }
+
+  .nido {
+    --bg: #EFF1E9; --surface: #FFFFFF; --surface-muted: #F7F8F2;
+    --ink: #23301F; --ink-muted: #5C6B54; --line: #D8DCC9;
+    --warn: #C98A2C; --bad: #B03A2E; --good: #3F7D5C;
+    color: var(--ink); background: var(--bg); min-height: 100vh; display: flex; width: 100%;
+  }
+  .nido h1, .nido h2, .nido h3 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
+  .nido button { font-family: inherit; cursor: pointer; }
+  .nido input, .nido select { font-family: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.65rem; outline: none; }
+  .nido input:focus, .nido select:focus { border-color: var(--ink-muted); }
+
+  .identity-wrap { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+  .identity-card { max-width: 420px; width: 100%; }
+  .identity-card h1 { font-size: 2rem; margin-bottom: 0.35rem; }
+  .identity-card p { color: var(--ink-muted); margin: 0 0 1.75rem; line-height: 1.5; }
+  .member-chip { display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left; padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .member-chip:hover { border-color: var(--ink-muted); }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; display:inline-block; }
+  .form-block { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  .form-block label { font-size: 0.8rem; color: var(--ink-muted); display: block; margin-bottom: 0.4rem; }
+  .form-block input { width: 100%; margin-bottom: 0.9rem; }
+  .color-picker { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
+  .color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; flex: none; }
+  .color-dot.selected { border-color: var(--ink); }
+  .primary-btn { background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 500; }
+  .primary-btn:disabled { opacity: 0.4; cursor: default; }
+  .ghost-btn { background: transparent; color: var(--ink-muted); border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; }
+  .helper-text { font-size: 0.78rem; color: var(--ink-muted); margin-top: -0.4rem; margin-bottom: 0.9rem; line-height: 1.4; }
+
+  .sidebar { width: 220px; flex: none; border-right: 1px solid var(--line); padding: 1.5rem 1.1rem; display: flex; flex-direction: column; gap: 1.75rem; }
+  .brand h1 { font-size: 1.5rem; font-style: italic; }
+  .brand-sub { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; }
+  .nav { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.6rem; border: none; background: none; border-radius: 8px; color: var(--ink-muted); font-size: 0.9rem; text-align: left; }
+  .nav-item.active { background: var(--surface); color: var(--ink); font-weight: 600; }
+  .me-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--ink-muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+  .switch-user { border: none; background: none; color: var(--ink-muted); font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; padding: 0; margin-top: 0.4rem; }
+  .switch-user:hover { color: var(--ink); }
+
+  .main { flex: 1; padding: 2rem 2.5rem; max-width: 900px; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; }
+  .main-header h2 { font-size: 1.6rem; }
+  .main-header p { color: var(--ink-muted); margin: 0.25rem 0 0; font-size: 0.92rem; }
+  .sync-badge { display: flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 0.4rem 0.8rem; font-size: 0.78rem; color: var(--ink-muted); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
+  .empty-state { padding: 2.5rem 1.5rem; text-align: center; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-muted); font-size: 0.92rem; line-height: 1.6; }
+
+  .entry-form { background: var(--surface-muted); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label { font-size: 0.72rem; color: var(--ink-muted); }
+  .field input, .field select { min-width: 120px; }
+  .field.grow { flex: 1; min-width: 160px; }
+  .add-btn { display: flex; align-items: center; gap: 0.35rem; background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; height: fit-content; }
+  .add-btn:disabled { opacity: 0.4; }
+
+  .list-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--row-color, var(--line)); border-radius: 10px; margin-bottom: 0.55rem; }
+  .list-row.done { opacity: 0.55; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { font-size: 0.94rem; font-weight: 500; }
+  .row-title.strike { text-decoration: line-through; }
+  .row-meta { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .row-amount { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+  .pill { font-size: 0.7rem; padding: 0.15rem 0.55rem; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .pill.warn { background: #F5E4C2; color: #7A5518; }
+  .pill.bad { background: #F3D6D1; color: #7C2A20; }
+  .pill.good { background: #D9EBE0; color: #245A3D; }
+  .icon-btn { border: none; background: none; color: var(--ink-muted); padding: 0.3rem; border-radius: 6px; flex: none; }
+  .icon-btn:hover { color: var(--bad); background: var(--surface-muted); }
+  .check-btn { border: 1.5px solid var(--line); background: var(--surface); width: 22px; height: 22px; border-radius: 6px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .check-btn.checked { background: var(--good); border-color: var(--good); color: #fff; }
+
+  .summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .summary-card { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; }
+  .summary-card .label { font-size: 0.75rem; color: var(--ink-muted); display: flex; align-items: center; gap: 0.4rem; }
+  .summary-card .value { font-family: 'Fraunces', serif; font-size: 1.4rem; margin-top: 0.25rem; }
+  .bar-track { height: 6px; border-radius: 4px; background: var(--surface-muted); margin-top: 0.5rem; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .cal-nav-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink-muted); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; margin-bottom: 1.75rem; }
+  .cal-dow { text-align: center; font-size: 0.72rem; color: var(--ink-muted); padding-bottom: 0.3rem; }
+  .cal-day { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.35rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 0.82rem; position: relative; }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.today { border-color: var(--ink); font-weight: 700; }
+  .cal-day.selected { background: var(--ink); color: #fff; }
+  .cal-day .dots { display: flex; gap: 2px; margin-top: 0.3rem; }
+  .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .day-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 1.1rem 1.2rem; }
+  .day-panel h3 { font-size: 1.05rem; margin-bottom: 0.75rem; }
+
+  @media (max-width: 760px) {
+    .nido { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0.9rem 1rem; gap: 1rem; border-right: none; border-bottom: 1px solid var(--line); }
+    .brand-sub { display: none; }
+    .nav { flex-direction: row; flex: 1; justify-content: space-around; }
+    .nav-item span { display: none; }
+    .me-row { display: none; }
+    .main { padding: 1.25rem 1.1rem; }
+    .entry-form { flex-direction: column; align-items: stretch; }
+    .field input, .field select { min-width: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React (sin paso de build) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- Tu configuración de Firebase -->
+<script src="./firebase-config.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ---------- Firebase init ---------- */
+let fbReady = false;
+try {
+  if (firebaseConfig.apiKey !== "PEGAR_ACA") {
+    firebase.initializeApp(firebaseConfig);
+    fbReady = true;
+  }
+} catch (e) {
+  console.error("Error inicializando Firebase:", e);
+}
+
+/* ---------- iconos (SVG inline, sin dependencias) ---------- */
+const Icon = ({ path, size = 16, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>{path}</svg>
+);
+const WalletIcon = (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />;
+const ClockIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></>} />;
+const CheckSquareIcon = (p) => <Icon {...p} path={<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></>} />;
+const CalendarIcon = (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/></>} />;
+const PlusIcon = (p) => <Icon {...p} path={<path d="M12 5v14M5 12h14"/>} />;
+const TrashIcon = (p) => <Icon {...p} path={<><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></>} />;
+const CheckIcon = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
+const RefreshIcon = (p) => <Icon {...p} path={<><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.5 0 4.7 1.1 6.3 2.8"/><path d="M21 3v6h-6"/></>} />;
+const LogoutIcon = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></>} />;
+const ChevronLeftIcon = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
+const ChevronRightIcon = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
+
+/* ---------- constantes ---------- */
+const PALETTE = ["#B24B3C", "#2F6B6E", "#6B4E71", "#C98A2C", "#3D5A80", "#6B7A3B"];
+const TABS = [
+  { id: "gastos", label: "Gastos", icon: WalletIcon },
+  { id: "vencimientos", label: "Vencimientos", icon: ClockIcon },
+  { id: "tareas", label: "Tareas", icon: CheckSquareIcon },
+  { id: "calendario", label: "Calendario", icon: CalendarIcon },
+];
+const CAT_GASTOS = ["Alquiler", "Expensas/Servicios", "Supermercado", "Salidas", "Otros"];
+const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+
+const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
+const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- Firebase helpers ---------- */
+function dbRef(house, path) {
+  return firebase.database().ref(`nido/${house}/${path}`);
+}
+function subscribeList(house, path, cb) {
+  const r = dbRef(house, path);
+  const listener = (snap) => {
+    const val = snap.val();
+    cb(Array.isArray(val) ? val : val ? Object.values(val) : []);
+  };
+  r.on("value", listener);
+  return () => r.off("value", listener);
+}
+function saveList(house, path, list) {
+  dbRef(house, path).set(list).catch((e) => console.error("Error guardando", path, e));
+}
+
+/* ---------- localStorage (identidad del dispositivo) ---------- */
+const getLocal = (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+const setLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+/* ---------- App raíz ---------- */
+function App() {
+  const [house, setHouse] = useState(() => getLocal("nido_house", null));
+  const [me, setMe] = useState(() => getLocal("nido_me", null));
+  const [connError] = useState(!fbReady);
+
+  if (connError) {
+    return (
+      <div className="nido" style={{ alignItems: "center", justifyContent: "center" }}>
+        <div className="identity-card" style={{ textAlign: "center" }}>
+          <h1>Falta configurar Firebase</h1>
+          <p>Abrí el archivo <code>firebase-config.js</code> y pegá ahí la configuración de tu proyecto de Firebase. Sin eso, la app no puede guardar ni sincronizar nada.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!house) {
+    return <HouseScreen onJoin={(h) => { setHouse(h); setLocal("nido_house", h); }} />;
+  }
+  if (!me) {
+    return <IdentityGate house={house} onChoose={(m) => { setMe(m); setLocal("nido_me", m); }} onBack={() => { setHouse(null); setLocal("nido_house", null); }} />;
+  }
+  return <HomeApp house={house} me={me} onSwitchUser={() => { setMe(null); setLocal("nido_me", null); }} onLeaveHouse={() => { setMe(null); setHouse(null); setLocal("nido_me", null); setLocal("nido_house", null); }} />;
+}
+
+/* ---------- pantalla: código de casa ---------- */
+function HouseScreen({ onJoin }) {
+  const [code, setCode] = useState("");
+  const submit = () => { const c = code.trim().toLowerCase().replace(/\s+/g, "-"); if (c) onJoin(c); };
+  return (
+    <div className="nido">
+      <div className="identity-wrap">
+        <div className="identity-card">
+          <h1>Bienvenido a Nido</h1>
+          <p>El espacio de los dos para organizar la convivencia: gastos, vencimientos, tareas y fechas importantes.</p>
+          <div className="form-block" style={{ borderTop: "none", paddingTop: 0 }}>
+            <label>Código de tu casa</label>
+            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ej: casa-verde-2026" onKeyDown={(e) => e.key === "Enter" && submit()} autoFocus />
+            <div className="helper-text">Inventen una palabra entre los dos y usen la misma en ambos celulares — así sus datos quedan conectados solo entre ustedes.</div>
+            <button className="primary-btn" onClick={submit} disabled={!code.trim()}>Continuar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- pantalla: elegir quién sos ---------- */
+function IdentityGate({ house, onChoose, onBack }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const usedColors = members.map((m) => m.color);
+  const [color, setColor] = useState(PALETTE[0]);
+
+  useEffect(() => {
+    const unsub = subscribeList(house, "members", (list) => { setMembers(list); setLoading(false); });
+    return unsub;
+  }, [house]);
+
+  useEffect(() => { setColor(PALETTE.find((c) => !usedColors.includes(c)) || PALETTE[0]); }, [members.length]);
+
+  const submit = () => {
+    const clean = name.trim();
+    if (!clean) return;
+    const member = { name: clean, color };
+    if (!members.some((m) => m.name === clean)) saveList(house, "members", [...members, member]);
+    onChoose(member);
+  };
+
+  if (loading) return <div className="nido" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#5C6B54" }}>Conectando con tu casa…</p></div>;
+
+  return (
+    <div className="nido">
+      <div className="identity-wrap">
+        <div className="identity-card">
+          <h1>¿Quién sos?</h1>
+          <p>Casa: <strong>{house}</strong></p>
+          {members.length > 0 && !adding && (
+            <>
+              {members.map((m) => (
+                <button key={m.name} className="member-chip" onClick={() => onChoose(m)}>
+                  <span className="swatch" style={{ background: m.color }} /> {m.name}
+                </button>
+              ))}
+              <button className="member-chip" style={{ color: "var(--ink-muted)", justifyContent: "center" }} onClick={() => setAdding(true)}>+ Soy otra persona</button>
+            </>
+          )}
+          {(adding || members.length === 0) && (
+            <div className="form-block" style={{ borderTop: members.length > 0 ? "1px solid var(--line)" : "none", paddingTop: members.length > 0 ? "1.25rem" : 0 }}>
+              <label>Tu nombre</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Juli" onKeyDown={(e) => e.key === "Enter" && submit()} autoFocus />
+              <label>Elegí tu color</label>
+              <div className="color-picker">
+                {PALETTE.map((c) => <button key={c} className={"color-dot" + (color === c ? " selected" : "")} style={{ background: c }} onClick={() => setColor(c)} />)}
+              </div>
+              <div style={{ display: "flex", gap: "0.6rem" }}>
+                <button className="primary-btn" onClick={submit} disabled={!name.trim()}>Entrar</button>
+                {members.length > 0 && <button className="ghost-btn" onClick={() => setAdding(false)}>Volver</button>}
+              </div>
+            </div>
+          )}
+          <button className="ghost-btn" style={{ marginTop: "1rem", padding: 0 }} onClick={onBack}>← Cambiar de casa</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- app principal ---------- */
+function HomeApp({ house, me, onSwitchUser, onLeaveHouse }) {
+  const [activeTab, setActiveTab] = useState("gastos");
+  const [members, setMembers] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [dues, setDues] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    const u1 = subscribeList(house, "members", setMembers);
+    const u2 = subscribeList(house, "expenses", setExpenses);
+    const u3 = subscribeList(house, "dues", setDues);
+    const u4 = subscribeList(house, "tasks", setTasks);
+    const u5 = subscribeList(house, "events", setEvents);
+    return () => { u1(); u2(); u3(); u4(); u5(); };
+  }, [house]);
+
+  const colorFor = useCallback((name) => members.find((m) => m.name === name)?.color || "#999", [members]);
+
+  return (
+    <div className="nido">
+      <aside className="sidebar">
+        <div>
+          <div className="brand"><h1>Nido</h1></div>
+          <div className="brand-sub">{members.length > 1 ? `La casa de ${members.map((m) => m.name).join(" y ")}` : `Casa: ${house}`}</div>
+        </div>
+        <nav className="nav">
+          {TABS.map((t) => { const I = t.icon; return (
+            <button key={t.id} className={"nav-item" + (activeTab === t.id ? " active" : "")} onClick={() => setActiveTab(t.id)}>
+              <I size={17} /><span>{t.label}</span>
+            </button>
+          ); })}
+        </nav>
+        <div className="me-row">
+          <span className="swatch" style={{ background: me.color }} />
+          <div>
+            Sos <strong style={{ color: "var(--ink)" }}>{me.name}</strong>
+            <button className="switch-user" onClick={onSwitchUser}><LogoutIcon size={12} /> Cambiar de usuario</button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main">
+        <div className="main-header">
+          <div>
+            <h2>{TABS.find((t) => t.id === activeTab).label}</h2>
+            <p>{headerCopy(activeTab)}</p>
+          </div>
+          <div className="sync-badge"><span className="sync-dot" /> Sincronizado</div>
+        </div>
+
+        {activeTab === "gastos" && <GastosTab expenses={expenses} members={members} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "expenses", l)} />}
+        {activeTab === "vencimientos" && <VencimientosTab dues={dues} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "dues", l)} />}
+        {activeTab === "tareas" && <TareasTab tasks={tasks} members={members} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "tasks", l)} />}
+        {activeTab === "calendario" && <CalendarioTab events={events} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "events", l)} />}
+      </main>
+    </div>
+  );
+}
+
+function headerCopy(tab) {
+  switch (tab) {
+    case "gastos": return "Registren lo que va gastando cada uno para tener todo a la vista.";
+    case "vencimientos": return "Alquiler, expensas y servicios: que no se les pase ninguna fecha.";
+    case "tareas": return "Lo que hay que hacer en casa, repartido entre los dos.";
+    case "calendario": return "Fechas importantes para los dos.";
+    default: return "";
+  }
+}
+
+/* ---------- tab: gastos ---------- */
+function GastosTab({ expenses, members, me, colorFor, onSave }) {
+  const [form, setForm] = useState({ desc: "", amount: "", category: CAT_GASTOS[0], date: todayISO() });
+  const add = () => {
+    if (!form.desc.trim() || !form.amount) return;
+    const entry = { id: uid(), desc: form.desc.trim(), amount: Number(form.amount), category: form.category, date: form.date, paidBy: me.name };
+    onSave([entry, ...expenses]);
+    setForm({ desc: "", amount: "", category: CAT_GASTOS[0], date: todayISO() });
+  };
+  const remove = (id) => onSave(expenses.filter((e) => e.id !== id));
+
+  const totals = {};
+  members.forEach((m) => (totals[m.name] = 0));
+  expenses.forEach((e) => { totals[e.paidBy] = (totals[e.paidBy] || 0) + e.amount; });
+  const maxTotal = Math.max(1, ...Object.values(totals));
+  const totalGeneral = expenses.reduce((s, e) => s + e.amount, 0);
+
+  return (
+    <div>
+      <div className="summary">
+        <div className="summary-card"><div className="label">Total registrado</div><div className="value">{money(totalGeneral)}</div></div>
+        {Object.entries(totals).map(([name, val]) => (
+          <div className="summary-card" key={name}>
+            <div className="label"><span className="swatch" style={{ background: colorFor(name) }} />{name}</div>
+            <div className="value">{money(val)}</div>
+            <div className="bar-track"><div className="bar-fill" style={{ width: `${(val / maxTotal) * 100}%`, background: colorFor(name) }} /></div>
+          </div>
+        ))}
+      </div>
+      <div className="entry-form">
+        <div className="field grow"><label>Descripción</label><input value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Ej: Supermercado" /></div>
+        <div className="field"><label>Monto</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" /></div>
+        <div className="field"><label>Categoría</label><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CAT_GASTOS.map((c) => <option key={c}>{c}</option>)}</select></div>
+        <div className="field"><label>Fecha</label><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+        <button className="add-btn" onClick={add} disabled={!form.desc.trim() || !form.amount}><PlusIcon size={15} /> Agregar</button>
+      </div>
+      {expenses.length === 0 ? (
+        <div className="empty-state">Todavía no cargaron ningún gasto.<br />Sumá el primero para empezar a llevar la cuenta.</div>
+      ) : expenses.map((e) => (
+        <div className="list-row" key={e.id} style={{ "--row-color": colorFor(e.paidBy) }}>
+          <div className="row-main"><div className="row-title">{e.desc}</div><div className="row-meta"><span>{e.category}</span><span>·</span><span>{fmtDate(e.date)}</span><span>·</span><span>{e.paidBy}</span></div></div>
+          <div className="row-amount">{money(e.amount)}</div>
+          <button className="icon-btn" onClick={() => remove(e.id)}><TrashIcon size={15} /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- tab: vencimientos ---------- */
+function dueStatus(due) {
+  if (due.paid) return { label: "Pagado", cls: "good" };
+  const days = Math.floor((new Date(due.dueDate) - new Date(todayISO())) / 86400000);
+  if (days < 0) return { label: "Vencido", cls: "bad" };
+  if (days <= 5) return { label: days === 0 ? "Vence hoy" : `Vence en ${days}d`, cls: "warn" };
+  return { label: "Al día", cls: "good" };
+}
+function VencimientosTab({ dues, me, colorFor, onSave }) {
+  const [form, setForm] = useState({ title: "", amount: "", dueDate: todayISO(), category: CAT_VENC[0], recurring: false });
+  const add = () => {
+    if (!form.title.trim() || !form.dueDate) return;
+    const entry = { id: uid(), title: form.title.trim(), amount: form.amount ? Number(form.amount) : null, dueDate: form.dueDate, category: form.category, recurring: form.recurring, paid: false, createdBy: me.name };
+    onSave([...dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    setForm({ title: "", amount: "", dueDate: todayISO(), category: CAT_VENC[0], recurring: false });
+  };
+  const togglePaid = (id) => {
+    const target = dues.find((d) => d.id === id);
+    let list = dues.map((d) => (d.id === id ? { ...d, paid: !d.paid } : d));
+    if (target && !target.paid && target.recurring) {
+      const next = new Date(target.dueDate);
+      next.setMonth(next.getMonth() + 1);
+      list = [...list, { ...target, id: uid(), paid: false, dueDate: next.toISOString().slice(0, 10) }];
+    }
+    onSave(list.sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+  };
+  const remove = (id) => onSave(dues.filter((d) => d.id !== id));
+  const sorted = [...dues].sort((a, b) => { if (a.paid !== b.paid) return a.paid ? 1 : -1; return a.dueDate.localeCompare(b.dueDate); });
+
+  return (
+    <div>
+      <div className="entry-form">
+        <div className="field grow"><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Alquiler" /></div>
+        <div className="field"><label>Monto (opcional)</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" /></div>
+        <div className="field"><label>Vence</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+        <div className="field"><label>Categoría</label><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CAT_VENC.map((c) => <option key={c}>{c}</option>)}</select></div>
+        <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" }}>
+          <input type="checkbox" style={{ width: "auto" }} checked={form.recurring} onChange={(e) => setForm({ ...form, recurring: e.target.checked })} /><label style={{ marginBottom: 0 }}>Mensual</label>
+        </div>
+        <button className="add-btn" onClick={add} disabled={!form.title.trim()}><PlusIcon size={15} /> Agregar</button>
+      </div>
+      {sorted.length === 0 ? (
+        <div className="empty-state">No hay vencimientos cargados.<br />Agregá el alquiler, las expensas o los servicios para no olvidarse de pagarlos.</div>
+      ) : sorted.map((d) => { const status = dueStatus(d); return (
+        <div className="list-row" key={d.id} style={{ "--row-color": colorFor(d.createdBy) }}>
+          <button className={"check-btn" + (d.paid ? " checked" : "")} onClick={() => togglePaid(d.id)}>{d.paid && <CheckIcon size={13} />}</button>
+          <div className="row-main"><div className={"row-title" + (d.paid ? " strike" : "")}>{d.title}</div><div className="row-meta"><span>{d.category}</span><span>·</span><span>Vence {fmtDate(d.dueDate)}</span>{d.recurring && <span>· Mensual</span>}</div></div>
+          <span className={"pill " + status.cls}>{status.label}</span>
+          {d.amount != null && <div className="row-amount">{money(d.amount)}</div>}
+          <button className="icon-btn" onClick={() => remove(d.id)}><TrashIcon size={15} /></button>
+        </div>
+      ); })}
+    </div>
+  );
+}
+
+/* ---------- tab: tareas ---------- */
+function TareasTab({ tasks, members, me, colorFor, onSave }) {
+  const [title, setTitle] = useState("");
+  const [assignee, setAssignee] = useState("Cualquiera");
+  const add = () => {
+    if (!title.trim()) return;
+    onSave([{ id: uid(), title: title.trim(), assignee, done: false, createdBy: me.name }, ...tasks]);
+    setTitle("");
+  };
+  const toggle = (id) => onSave(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  const remove = (id) => onSave(tasks.filter((t) => t.id !== id));
+  const pending = tasks.filter((t) => !t.done);
+  const done = tasks.filter((t) => t.done);
+
+  return (
+    <div>
+      <div className="entry-form">
+        <div className="field grow"><label>Tarea</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Sacar la basura" onKeyDown={(e) => e.key === "Enter" && add()} /></div>
+        <div className="field"><label>Para</label><select value={assignee} onChange={(e) => setAssignee(e.target.value)}><option>Cualquiera</option>{members.map((m) => <option key={m.name}>{m.name}</option>)}</select></div>
+        <button className="add-btn" onClick={add} disabled={!title.trim()}><PlusIcon size={15} /> Agregar</button>
+      </div>
+      {tasks.length === 0 ? (
+        <div className="empty-state">La lista de tareas está vacía.<br />Anoten lo que hay que hacer en casa esta semana.</div>
+      ) : (
+        <>
+          {pending.map((t) => (
+            <div className="list-row" key={t.id} style={{ "--row-color": colorFor(t.createdBy) }}>
+              <button className="check-btn" onClick={() => toggle(t.id)} />
+              <div className="row-main"><div className="row-title">{t.title}</div><div className="row-meta"><span>{t.assignee}</span></div></div>
+              <button className="icon-btn" onClick={() => remove(t.id)}><TrashIcon size={15} /></button>
+            </div>
+          ))}
+          {done.length > 0 && <div style={{ marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" }}>Hechas</div>}
+          {done.map((t) => (
+            <div className="list-row done" key={t.id} style={{ "--row-color": colorFor(t.createdBy) }}>
+              <button className="check-btn checked" onClick={() => toggle(t.id)}><CheckIcon size={13} /></button>
+              <div className="row-main"><div className="row-title strike">{t.title}</div><div className="row-meta"><span>{t.assignee}</span></div></div>
+              <button className="icon-btn" onClick={() => remove(t.id)}><TrashIcon size={15} /></button>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------- tab: calendario ---------- */
+function CalendarioTab({ events, me, colorFor, onSave }) {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
+  const [selected, setSelected] = useState(todayISO());
+  const [title, setTitle] = useState("");
+  const addEvent = () => { if (!title.trim()) return; onSave([...events, { id: uid(), title: title.trim(), date: selected, createdBy: me.name }]); setTitle(""); };
+  const remove = (id) => onSave(events.filter((e) => e.id !== id));
+
+  const { year, month } = cursor;
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const isoFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const eventsFor = (iso) => events.filter((e) => e.date === iso);
+  const today = todayISO();
+  const changeMonth = (delta) => { let m = month + delta, y = year; if (m < 0) { m = 11; y -= 1; } if (m > 11) { m = 0; y += 1; } setCursor({ year: y, month: m }); };
+  const dayEvents = eventsFor(selected);
+
+  return (
+    <div>
+      <div className="cal-header">
+        <button className="cal-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeftIcon size={16} /></button>
+        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "1.1rem", textTransform: "capitalize" }}>{MESES[month]} {year}</h3>
+        <button className="cal-nav-btn" onClick={() => changeMonth(1)}><ChevronRightIcon size={16} /></button>
+      </div>
+      <div className="cal-grid">
+        {DIAS_SEMANA.map((d, i) => <div className="cal-dow" key={i}>{d}</div>)}
+        {cells.map((d, i) => {
+          if (d === null) return <div className="cal-day empty" key={i} />;
+          const iso = isoFor(d);
+          const dayEvs = eventsFor(iso);
+          return (
+            <button key={i} className={"cal-day" + (iso === today ? " today" : "") + (iso === selected ? " selected" : "")} onClick={() => setSelected(iso)}>
+              {d}
+              <div className="dots">{dayEvs.slice(0, 3).map((e) => <span key={e.id} className="dot" style={{ background: iso === selected ? "#fff" : colorFor(e.createdBy) }} />)}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="day-panel">
+        <h3>{new Date(selected + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}</h3>
+        {dayEvents.length === 0 ? (
+          <p style={{ color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "1rem" }}>No hay nada anotado este día.</p>
+        ) : dayEvents.map((e) => (
+          <div className="list-row" key={e.id} style={{ "--row-color": colorFor(e.createdBy) }}>
+            <div className="row-main"><div className="row-title">{e.title}</div><div className="row-meta"><span>{e.createdBy}</span></div></div>
+            <button className="icon-btn" onClick={() => remove(e.id)}><TrashIcon size={15} /></button>
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Agregar algo a este día…" style={{ flex: 1 }} onKeyDown={(e) => e.key === "Enter" && addEvent()} />
+          <button className="add-btn" onClick={addEvent} disabled={!title.trim()}><PlusIcon size={15} /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
