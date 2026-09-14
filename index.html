@@ -129,11 +129,6 @@
 <body>
 <div id="root"></div>
 
-<!-- React (sin paso de build) -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
 <!-- Firebase (Realtime Database) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -141,470 +136,780 @@
 <!-- Tu configuración de Firebase -->
 <script src="./firebase-config.js"></script>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+<!-- Nido, en JavaScript puro (sin React ni Babel: nada que se pueda romper en producción) -->
+<script>
+(function () {
+  "use strict";
 
-/* ---------- Firebase init ---------- */
-let fbReady = false;
-try {
-  if (firebaseConfig.apiKey !== "PEGAR_ACA") {
-    firebase.initializeApp(firebaseConfig);
-    fbReady = true;
+  /* ---------- Firebase init ---------- */
+  let fbReady = false;
+  try {
+    if (firebaseConfig.apiKey !== "PEGAR_ACA") {
+      firebase.initializeApp(firebaseConfig);
+      fbReady = true;
+    }
+  } catch (e) {
+    console.error("Error inicializando Firebase:", e);
   }
-} catch (e) {
-  console.error("Error inicializando Firebase:", e);
-}
 
-/* ---------- iconos (SVG inline, sin dependencias) ---------- */
-const Icon = ({ path, size = 16, ...p }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>{path}</svg>
-);
-const WalletIcon = (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />;
-const ClockIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></>} />;
-const CheckSquareIcon = (p) => <Icon {...p} path={<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></>} />;
-const CalendarIcon = (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/></>} />;
-const PlusIcon = (p) => <Icon {...p} path={<path d="M12 5v14M5 12h14"/>} />;
-const TrashIcon = (p) => <Icon {...p} path={<><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></>} />;
-const CheckIcon = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
-const RefreshIcon = (p) => <Icon {...p} path={<><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.5 0 4.7 1.1 6.3 2.8"/><path d="M21 3v6h-6"/></>} />;
-const LogoutIcon = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></>} />;
-const ChevronLeftIcon = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
-const ChevronRightIcon = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
+  /* ---------- helpers para construir DOM sin JSX ---------- */
+  function h(tag, opts, ...children) {
+    const node = document.createElement(tag);
+    opts = opts || {};
+    for (const key in opts) {
+      const val = opts[key];
+      if (val == null || val === false) continue;
+      if (key === "class") node.className = val;
+      else if (key === "style" && typeof val === "object") {
+        for (const sk in val) {
+          if (sk.indexOf("--") === 0) node.style.setProperty(sk, val[sk]);
+          else node.style[sk] = val[sk];
+        }
+      } else if (key.indexOf("on") === 0 && typeof val === "function") {
+        node.addEventListener(key.slice(2).toLowerCase(), val);
+      } else if (val === true) {
+        node.setAttribute(key, "");
+      } else {
+        node.setAttribute(key, val);
+      }
+    }
+    for (const child of children.flat(Infinity)) {
+      if (child == null || child === false) continue;
+      node.appendChild(child.nodeType ? child : document.createTextNode(String(child)));
+    }
+    return node;
+  }
 
-/* ---------- constantes ---------- */
-const PALETTE = ["#B24B3C", "#2F6B6E", "#6B4E71", "#C98A2C", "#3D5A80", "#6B7A3B"];
-const TABS = [
-  { id: "gastos", label: "Gastos", icon: WalletIcon },
-  { id: "vencimientos", label: "Vencimientos", icon: ClockIcon },
-  { id: "tareas", label: "Tareas", icon: CheckSquareIcon },
-  { id: "calendario", label: "Calendario", icon: CalendarIcon },
-];
-const CAT_GASTOS = ["Alquiler", "Expensas/Servicios", "Supermercado", "Salidas", "Otros"];
-const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
-const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
-
-const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
-const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-
-/* ---------- Firebase helpers ---------- */
-function dbRef(house, path) {
-  return firebase.database().ref(`nido/${house}/${path}`);
-}
-function subscribeList(house, path, cb) {
-  const r = dbRef(house, path);
-  const listener = (snap) => {
-    const val = snap.val();
-    cb(Array.isArray(val) ? val : val ? Object.values(val) : []);
-  };
-  r.on("value", listener);
-  return () => r.off("value", listener);
-}
-function saveList(house, path, list) {
-  dbRef(house, path).set(list).catch((e) => console.error("Error guardando", path, e));
-}
-
-/* ---------- localStorage (identidad del dispositivo) ---------- */
-const getLocal = (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
-const setLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-
-/* ---------- App raíz ---------- */
-function App() {
-  const [house, setHouse] = useState(() => getLocal("nido_house", null));
-  const [me, setMe] = useState(() => getLocal("nido_me", null));
-  const [connError] = useState(!fbReady);
-
-  if (connError) {
-    return (
-      <div className="nido" style={{ alignItems: "center", justifyContent: "center" }}>
-        <div className="identity-card" style={{ textAlign: "center" }}>
-          <h1>Falta configurar Firebase</h1>
-          <p>Abrí el archivo <code>firebase-config.js</code> y pegá ahí la configuración de tu proyecto de Firebase. Sin eso, la app no puede guardar ni sincronizar nada.</p>
-        </div>
-      </div>
+  function svg(tag, attrs, ...children) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    attrs = attrs || {};
+    for (const key in attrs) { if (attrs[key] != null) node.setAttribute(key, attrs[key]); }
+    for (const child of children.flat(Infinity)) { if (child != null) node.appendChild(child); }
+    return node;
+  }
+  function icon(paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconRect(rectAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("rect", rectAttrs), ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconCircle(circleAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("circle", circleAttrs), ...paths.map((d) => svg("path", { d }))
     );
   }
 
-  if (!house) {
-    return <HouseScreen onJoin={(h) => { setHouse(h); setLocal("nido_house", h); }} />;
+  /* ---------- iconos (SVG inline, sin dependencias) ---------- */
+  const WalletIcon = (size) => icon(["M21 12V7H5a2 2 0 0 1 0-4h14v4", "M3 5v14a2 2 0 0 0 2 2h16v-5", "M18 12a2 2 0 0 0 0 4h4v-4Z"], size);
+  const ClockIcon = (size) => iconCircle({ cx: 12, cy: 12, r: 9 }, ["M12 7v5l3 3"], size);
+  const CheckSquareIcon = (size) => iconRect({ x: 3, y: 3, width: 18, height: 18, rx: 2 }, ["m9 12 2 2 4-4"], size);
+  const CalendarIcon = (size) => iconRect({ x: 3, y: 4, width: 18, height: 17, rx: 2 }, ["M16 2v4M8 2v4M3 9h18"], size);
+  const PlusIcon = (size) => icon(["M12 5v14M5 12h14"], size);
+  const TrashIcon = (size) => icon(["M3 6h18", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"], size);
+  const CheckIcon = (size) => icon(["M20 6 9 17l-5-5"], size);
+  const LogoutIcon = (size) => icon(["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"], size);
+  const ChevronLeftIcon = (size) => icon(["m15 18-6-6 6-6"], size);
+  const ChevronRightIcon = (size) => icon(["m9 18 6-6-6-6"], size);
+  const CoinsIcon = (size) => svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+    svg("circle", { cx: 8, cy: 8, r: 6 }),
+    svg("path", { d: "M18.09 10.37A6 6 0 1 1 10.34 18" }),
+    svg("path", { d: "M7 6h1v4" }),
+    svg("path", { d: "m16.71 13.88.7.71-2.82 2.82" })
+  );
+  const BellIcon = (size) => icon(["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"], size);
+  const RepeatIcon = (size) => icon(["m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"], size);
+  const LockIcon = (size) => iconRect({ x: 3, y: 11, width: 18, height: 11, rx: 2 }, ["M7 11V7a5 5 0 0 1 10 0v4"], size);
+
+  /* ---------- constantes ---------- */
+  const PALETTE = ["#B24B3C", "#2F6B6E", "#6B4E71", "#C98A2C", "#3D5A80", "#6B7A3B"];
+  const TABS = [
+    { id: "gastos", label: "Gastos", icon: WalletIcon },
+    { id: "fondo", label: "Fondo común", icon: CoinsIcon },
+    { id: "vencimientos", label: "Vencimientos", icon: ClockIcon },
+    { id: "tareas", label: "Tareas", icon: CheckSquareIcon },
+    { id: "calendario", label: "Calendario", icon: CalendarIcon },
+  ];
+  const CAT_GASTOS = ["Alquiler", "Expensas/Servicios", "Supermercado", "Salidas", "Otros"];
+  const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+
+  const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
+  const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* ---------- hash de contraseña (SHA-256, para el gate de acceso a la casa) ---------- */
+  async function hashPassword(pw) {
+    const enc = new TextEncoder().encode(String(pw));
+    const digest = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
-  if (!me) {
-    return <IdentityGate house={house} onChoose={(m) => { setMe(m); setLocal("nido_me", m); }} onBack={() => { setHouse(null); setLocal("nido_house", null); }} />;
+
+  /* ---------- notificaciones locales para actividades con horario ---------- */
+  const notifSupported = typeof Notification !== "undefined";
+  function requestNotifPermission() {
+    if (!notifSupported) return;
+    Notification.requestPermission().then(() => render());
   }
-  return <HomeApp house={house} me={me} onSwitchUser={() => { setMe(null); setLocal("nido_me", null); }} onLeaveHouse={() => { setMe(null); setHouse(null); setLocal("nido_me", null); setLocal("nido_house", null); }} />;
-}
-
-/* ---------- pantalla: código de casa ---------- */
-function HouseScreen({ onJoin }) {
-  const [code, setCode] = useState("");
-  const submit = () => { const c = code.trim().toLowerCase().replace(/\s+/g, "-"); if (c) onJoin(c); };
-  return (
-    <div className="nido">
-      <div className="identity-wrap">
-        <div className="identity-card">
-          <h1>Bienvenido a Nido</h1>
-          <p>El espacio de los dos para organizar la convivencia: gastos, vencimientos, tareas y fechas importantes.</p>
-          <div className="form-block" style={{ borderTop: "none", paddingTop: 0 }}>
-            <label>Código de tu casa</label>
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ej: casa-verde-2026" onKeyDown={(e) => e.key === "Enter" && submit()} autoFocus />
-            <div className="helper-text">Inventen una palabra entre los dos y usen la misma en ambos celulares — así sus datos quedan conectados solo entre ustedes.</div>
-            <button className="primary-btn" onClick={submit} disabled={!code.trim()}>Continuar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- pantalla: elegir quién sos ---------- */
-function IdentityGate({ house, onChoose, onBack }) {
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const usedColors = members.map((m) => m.color);
-  const [color, setColor] = useState(PALETTE[0]);
-
-  useEffect(() => {
-    const unsub = subscribeList(house, "members", (list) => { setMembers(list); setLoading(false); });
-    return unsub;
-  }, [house]);
-
-  useEffect(() => { setColor(PALETTE.find((c) => !usedColors.includes(c)) || PALETTE[0]); }, [members.length]);
-
-  const submit = () => {
-    const clean = name.trim();
-    if (!clean) return;
-    const member = { name: clean, color };
-    if (!members.some((m) => m.name === clean)) saveList(house, "members", [...members, member]);
-    onChoose(member);
-  };
-
-  if (loading) return <div className="nido" style={{ alignItems: "center", justifyContent: "center" }}><p style={{ color: "#5C6B54" }}>Conectando con tu casa…</p></div>;
-
-  return (
-    <div className="nido">
-      <div className="identity-wrap">
-        <div className="identity-card">
-          <h1>¿Quién sos?</h1>
-          <p>Casa: <strong>{house}</strong></p>
-          {members.length > 0 && !adding && (
-            <>
-              {members.map((m) => (
-                <button key={m.name} className="member-chip" onClick={() => onChoose(m)}>
-                  <span className="swatch" style={{ background: m.color }} /> {m.name}
-                </button>
-              ))}
-              <button className="member-chip" style={{ color: "var(--ink-muted)", justifyContent: "center" }} onClick={() => setAdding(true)}>+ Soy otra persona</button>
-            </>
-          )}
-          {(adding || members.length === 0) && (
-            <div className="form-block" style={{ borderTop: members.length > 0 ? "1px solid var(--line)" : "none", paddingTop: members.length > 0 ? "1.25rem" : 0 }}>
-              <label>Tu nombre</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Juli" onKeyDown={(e) => e.key === "Enter" && submit()} autoFocus />
-              <label>Elegí tu color</label>
-              <div className="color-picker">
-                {PALETTE.map((c) => <button key={c} className={"color-dot" + (color === c ? " selected" : "")} style={{ background: c }} onClick={() => setColor(c)} />)}
-              </div>
-              <div style={{ display: "flex", gap: "0.6rem" }}>
-                <button className="primary-btn" onClick={submit} disabled={!name.trim()}>Entrar</button>
-                {members.length > 0 && <button className="ghost-btn" onClick={() => setAdding(false)}>Volver</button>}
-              </div>
-            </div>
-          )}
-          <button className="ghost-btn" style={{ marginTop: "1rem", padding: 0 }} onClick={onBack}>← Cambiar de casa</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- app principal ---------- */
-function HomeApp({ house, me, onSwitchUser, onLeaveHouse }) {
-  const [activeTab, setActiveTab] = useState("gastos");
-  const [members, setMembers] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [dues, setDues] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [events, setEvents] = useState([]);
-
-  useEffect(() => {
-    const u1 = subscribeList(house, "members", setMembers);
-    const u2 = subscribeList(house, "expenses", setExpenses);
-    const u3 = subscribeList(house, "dues", setDues);
-    const u4 = subscribeList(house, "tasks", setTasks);
-    const u5 = subscribeList(house, "events", setEvents);
-    return () => { u1(); u2(); u3(); u4(); u5(); };
-  }, [house]);
-
-  const colorFor = useCallback((name) => members.find((m) => m.name === name)?.color || "#999", [members]);
-
-  return (
-    <div className="nido">
-      <aside className="sidebar">
-        <div>
-          <div className="brand"><h1>Nido</h1></div>
-          <div className="brand-sub">{members.length > 1 ? `La casa de ${members.map((m) => m.name).join(" y ")}` : `Casa: ${house}`}</div>
-        </div>
-        <nav className="nav">
-          {TABS.map((t) => { const I = t.icon; return (
-            <button key={t.id} className={"nav-item" + (activeTab === t.id ? " active" : "")} onClick={() => setActiveTab(t.id)}>
-              <I size={17} /><span>{t.label}</span>
-            </button>
-          ); })}
-        </nav>
-        <div className="me-row">
-          <span className="swatch" style={{ background: me.color }} />
-          <div>
-            Sos <strong style={{ color: "var(--ink)" }}>{me.name}</strong>
-            <button className="switch-user" onClick={onSwitchUser}><LogoutIcon size={12} /> Cambiar de usuario</button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="main">
-        <div className="main-header">
-          <div>
-            <h2>{TABS.find((t) => t.id === activeTab).label}</h2>
-            <p>{headerCopy(activeTab)}</p>
-          </div>
-          <div className="sync-badge"><span className="sync-dot" /> Sincronizado</div>
-        </div>
-
-        {activeTab === "gastos" && <GastosTab expenses={expenses} members={members} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "expenses", l)} />}
-        {activeTab === "vencimientos" && <VencimientosTab dues={dues} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "dues", l)} />}
-        {activeTab === "tareas" && <TareasTab tasks={tasks} members={members} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "tasks", l)} />}
-        {activeTab === "calendario" && <CalendarioTab events={events} me={me} colorFor={colorFor} onSave={(l) => saveList(house, "events", l)} />}
-      </main>
-    </div>
-  );
-}
-
-function headerCopy(tab) {
-  switch (tab) {
-    case "gastos": return "Registren lo que va gastando cada uno para tener todo a la vista.";
-    case "vencimientos": return "Alquiler, expensas y servicios: que no se les pase ninguna fecha.";
-    case "tareas": return "Lo que hay que hacer en casa, repartido entre los dos.";
-    case "calendario": return "Fechas importantes para los dos.";
-    default: return "";
+  function notifiedKey(taskId, dateISO) { return `nido_notified_${taskId}_${dateISO}`; }
+  function checkTaskNotifications() {
+    if (!notifSupported || Notification.permission !== "granted") return;
+    if (!state.house || !state.me) return;
+    const today = todayISO();
+    const hm = nowHM();
+    state.tasks.forEach((t) => {
+      if (!t.time) return;
+      const isDoneToday = t.frequency === "diaria" ? t.doneDate === today : t.done;
+      if (isDoneToday) return;
+      if (t.time !== hm) return;
+      const key = notifiedKey(t.id, today);
+      if (getLocal(key, false)) return;
+      setLocal(key, true);
+      try {
+        new Notification("Nido — recordatorio", { body: `${t.title}${t.assignee && t.assignee !== "Cualquiera" ? " · " + t.assignee : ""}`, tag: key });
+      } catch (e) {}
+    });
   }
-}
 
-/* ---------- tab: gastos ---------- */
-function GastosTab({ expenses, members, me, colorFor, onSave }) {
-  const [form, setForm] = useState({ desc: "", amount: "", category: CAT_GASTOS[0], date: todayISO() });
-  const add = () => {
-    if (!form.desc.trim() || !form.amount) return;
-    const entry = { id: uid(), desc: form.desc.trim(), amount: Number(form.amount), category: form.category, date: form.date, paidBy: me.name };
-    onSave([entry, ...expenses]);
-    setForm({ desc: "", amount: "", category: CAT_GASTOS[0], date: todayISO() });
+  /* ---------- Firebase helpers ---------- */
+  function dbRef(house, path) {
+    return firebase.database().ref(`nido/${house}/${path}`);
+  }
+  function subscribeList(house, path, cb) {
+    const r = dbRef(house, path);
+    const listener = (snap) => {
+      const val = snap.val();
+      cb(Array.isArray(val) ? val : val ? Object.values(val) : []);
+    };
+    r.on("value", listener);
+    return () => r.off("value", listener);
+  }
+  function saveList(house, path, list) {
+    dbRef(house, path).set(list).catch((e) => console.error("Error guardando", path, e));
+  }
+
+  /* ---------- localStorage (identidad del dispositivo) ---------- */
+  const getLocal = (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+  const setLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  /* ---------- estado global + suscripción a la casa actual ---------- */
+  const state = {
+    house: getLocal("nido_house", null),
+    houseAuthed: getLocal("nido_house_authed", null), // guarda el código de la casa ya autenticada en este dispositivo
+    me: getLocal("nido_me", null),
+    members: [], expenses: [], dues: [], tasks: [], events: [], fund: [],
+    membersLoaded: false,
+    activeTab: "gastos",
+    identityAdding: false,
+    identityColor: null,
+    calCursor: (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; })(),
+    calSelected: todayISO(),
+    houseGateBusy: false,
+    houseGateError: null,
   };
-  const remove = (id) => onSave(expenses.filter((e) => e.id !== id));
+  let pendingAutofocus = null;
 
-  const totals = {};
-  members.forEach((m) => (totals[m.name] = 0));
-  expenses.forEach((e) => { totals[e.paidBy] = (totals[e.paidBy] || 0) + e.amount; });
-  const maxTotal = Math.max(1, ...Object.values(totals));
-  const totalGeneral = expenses.reduce((s, e) => s + e.amount, 0);
+  let unsubHouse = null;
+  function unsubscribeHouse() { if (unsubHouse) { unsubHouse(); unsubHouse = null; } }
+  function subscribeHouse(house) {
+    unsubscribeHouse();
+    state.members = []; state.expenses = []; state.dues = []; state.tasks = []; state.events = []; state.fund = [];
+    state.membersLoaded = false;
+    const u1 = subscribeList(house, "members", (list) => { state.members = list; state.membersLoaded = true; render(); });
+    const u2 = subscribeList(house, "expenses", (list) => { state.expenses = list; render(); });
+    const u3 = subscribeList(house, "dues", (list) => { state.dues = list; render(); });
+    const u4 = subscribeList(house, "tasks", (list) => { state.tasks = list; render(); checkTaskNotifications(); });
+    const u5 = subscribeList(house, "events", (list) => { state.events = list; render(); });
+    const u6 = subscribeList(house, "fund", (list) => { state.fund = list; render(); });
+    unsubHouse = () => { u1(); u2(); u3(); u4(); u5(); u6(); };
+  }
+  if (fbReady && state.house && state.houseAuthed === state.house) subscribeHouse(state.house);
+  if (notifSupported) setInterval(checkTaskNotifications, 20000);
 
-  return (
-    <div>
-      <div className="summary">
-        <div className="summary-card"><div className="label">Total registrado</div><div className="value">{money(totalGeneral)}</div></div>
-        {Object.entries(totals).map(([name, val]) => (
-          <div className="summary-card" key={name}>
-            <div className="label"><span className="swatch" style={{ background: colorFor(name) }} />{name}</div>
-            <div className="value">{money(val)}</div>
-            <div className="bar-track"><div className="bar-fill" style={{ width: `${(val / maxTotal) * 100}%`, background: colorFor(name) }} /></div>
-          </div>
-        ))}
-      </div>
-      <div className="entry-form">
-        <div className="field grow"><label>Descripción</label><input value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Ej: Supermercado" /></div>
-        <div className="field"><label>Monto</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" /></div>
-        <div className="field"><label>Categoría</label><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CAT_GASTOS.map((c) => <option key={c}>{c}</option>)}</select></div>
-        <div className="field"><label>Fecha</label><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-        <button className="add-btn" onClick={add} disabled={!form.desc.trim() || !form.amount}><PlusIcon size={15} /> Agregar</button>
-      </div>
-      {expenses.length === 0 ? (
-        <div className="empty-state">Todavía no cargaron ningún gasto.<br />Sumá el primero para empezar a llevar la cuenta.</div>
-      ) : expenses.map((e) => (
-        <div className="list-row" key={e.id} style={{ "--row-color": colorFor(e.paidBy) }}>
-          <div className="row-main"><div className="row-title">{e.desc}</div><div className="row-meta"><span>{e.category}</span><span>·</span><span>{fmtDate(e.date)}</span><span>·</span><span>{e.paidBy}</span></div></div>
-          <div className="row-amount">{money(e.amount)}</div>
-          <button className="icon-btn" onClick={() => remove(e.id)}><TrashIcon size={15} /></button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ---------- tab: vencimientos ---------- */
-function dueStatus(due) {
-  if (due.paid) return { label: "Pagado", cls: "good" };
-  const days = Math.floor((new Date(due.dueDate) - new Date(todayISO())) / 86400000);
-  if (days < 0) return { label: "Vencido", cls: "bad" };
-  if (days <= 5) return { label: days === 0 ? "Vence hoy" : `Vence en ${days}d`, cls: "warn" };
-  return { label: "Al día", cls: "good" };
-}
-function VencimientosTab({ dues, me, colorFor, onSave }) {
-  const [form, setForm] = useState({ title: "", amount: "", dueDate: todayISO(), category: CAT_VENC[0], recurring: false });
-  const add = () => {
-    if (!form.title.trim() || !form.dueDate) return;
-    const entry = { id: uid(), title: form.title.trim(), amount: form.amount ? Number(form.amount) : null, dueDate: form.dueDate, category: form.category, recurring: form.recurring, paid: false, createdBy: me.name };
-    onSave([...dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
-    setForm({ title: "", amount: "", dueDate: todayISO(), category: CAT_VENC[0], recurring: false });
-  };
-  const togglePaid = (id) => {
-    const target = dues.find((d) => d.id === id);
-    let list = dues.map((d) => (d.id === id ? { ...d, paid: !d.paid } : d));
-    if (target && !target.paid && target.recurring) {
-      const next = new Date(target.dueDate);
-      next.setMonth(next.getMonth() + 1);
-      list = [...list, { ...target, id: uid(), paid: false, dueDate: next.toISOString().slice(0, 10) }];
+  // Verifica (o crea, si es la primera vez) el código+contraseña de la casa.
+  // Devuelve { ok: true } o { ok: false, error: "..." }
+  async function enterHouse(codeRaw, passwordRaw) {
+    const code = codeRaw.trim().toLowerCase().replace(/\s+/g, "-");
+    const password = passwordRaw;
+    if (!code || !password) return { ok: false, error: "Completá el código y la contraseña." };
+    const metaSnap = await firebase.database().ref(`nido/${code}/meta`).once("value");
+    const meta = metaSnap.val();
+    const hash = await hashPassword(password);
+    if (!meta || !meta.passwordHash) {
+      // Casa nueva: esta contraseña queda como la contraseña de la casa.
+      await firebase.database().ref(`nido/${code}/meta`).set({ passwordHash: hash, createdAt: Date.now() });
+    } else if (meta.passwordHash !== hash) {
+      return { ok: false, error: "Código o contraseña incorrectos." };
     }
-    onSave(list.sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
-  };
-  const remove = (id) => onSave(dues.filter((d) => d.id !== id));
-  const sorted = [...dues].sort((a, b) => { if (a.paid !== b.paid) return a.paid ? 1 : -1; return a.dueDate.localeCompare(b.dueDate); });
+    state.house = code;
+    state.houseAuthed = code;
+    setLocal("nido_house", code);
+    setLocal("nido_house_authed", code);
+    subscribeHouse(code);
+    return { ok: true };
+  }
 
-  return (
-    <div>
-      <div className="entry-form">
-        <div className="field grow"><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej: Alquiler" /></div>
-        <div className="field"><label>Monto (opcional)</label><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" /></div>
-        <div className="field"><label>Vence</label><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
-        <div className="field"><label>Categoría</label><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{CAT_VENC.map((c) => <option key={c}>{c}</option>)}</select></div>
-        <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" }}>
-          <input type="checkbox" style={{ width: "auto" }} checked={form.recurring} onChange={(e) => setForm({ ...form, recurring: e.target.checked })} /><label style={{ marginBottom: 0 }}>Mensual</label>
-        </div>
-        <button className="add-btn" onClick={add} disabled={!form.title.trim()}><PlusIcon size={15} /> Agregar</button>
-      </div>
-      {sorted.length === 0 ? (
-        <div className="empty-state">No hay vencimientos cargados.<br />Agregá el alquiler, las expensas o los servicios para no olvidarse de pagarlos.</div>
-      ) : sorted.map((d) => { const status = dueStatus(d); return (
-        <div className="list-row" key={d.id} style={{ "--row-color": colorFor(d.createdBy) }}>
-          <button className={"check-btn" + (d.paid ? " checked" : "")} onClick={() => togglePaid(d.id)}>{d.paid && <CheckIcon size={13} />}</button>
-          <div className="row-main"><div className={"row-title" + (d.paid ? " strike" : "")}>{d.title}</div><div className="row-meta"><span>{d.category}</span><span>·</span><span>Vence {fmtDate(d.dueDate)}</span>{d.recurring && <span>· Mensual</span>}</div></div>
-          <span className={"pill " + status.cls}>{status.label}</span>
-          {d.amount != null && <div className="row-amount">{money(d.amount)}</div>}
-          <button className="icon-btn" onClick={() => remove(d.id)}><TrashIcon size={15} /></button>
-        </div>
-      ); })}
-    </div>
-  );
-}
+  function leaveHouse() {
+    unsubscribeHouse();
+    state.house = null; state.me = null; state.houseAuthed = null;
+    setLocal("nido_house", null); setLocal("nido_me", null); setLocal("nido_house_authed", null);
+    render();
+  }
+  function switchUser() { state.me = null; setLocal("nido_me", null); render(); }
+  function chooseMember(member) {
+    if (!state.members.some((m) => m.name === member.name)) {
+      saveList(state.house, "members", [...state.members, member]);
+    }
+    state.me = member; setLocal("nido_me", member);
+    state.identityAdding = false; state.identityColor = null;
+    render();
+  }
+  function colorFor(name) {
+    const m = state.members.find((mm) => mm.name === name);
+    return m ? m.color : "#999";
+  }
+  function headerCopy(tab) {
+    switch (tab) {
+      case "gastos": return "Registren lo que va gastando cada uno para tener todo a la vista.";
+      case "fondo": return "El pozo común de la casa, actualizado al instante para los dos.";
+      case "vencimientos": return "Alquiler, expensas y servicios: que no se les pase ninguna fecha.";
+      case "tareas": return "Lo que hay que hacer en casa, repartido entre los dos.";
+      case "calendario": return "Fechas importantes para los dos.";
+      default: return "";
+    }
+  }
+  function fundBalance() {
+    return state.fund.reduce((s, m) => s + (m.type === "ingreso" ? m.amount : -m.amount), 0);
+  }
+  function dueStatus(due) {
+    if (due.paid) return { label: "Pagado", cls: "good" };
+    const days = Math.floor((new Date(due.dueDate) - new Date(todayISO())) / 86400000);
+    if (days < 0) return { label: "Vencido", cls: "bad" };
+    if (days <= 5) return { label: days === 0 ? "Vence hoy" : `Vence en ${days}d`, cls: "warn" };
+    return { label: "Al día", cls: "good" };
+  }
 
-/* ---------- tab: tareas ---------- */
-function TareasTab({ tasks, members, me, colorFor, onSave }) {
-  const [title, setTitle] = useState("");
-  const [assignee, setAssignee] = useState("Cualquiera");
-  const add = () => {
-    if (!title.trim()) return;
-    onSave([{ id: uid(), title: title.trim(), assignee, done: false, createdBy: me.name }, ...tasks]);
-    setTitle("");
-  };
-  const toggle = (id) => onSave(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-  const remove = (id) => onSave(tasks.filter((t) => t.id !== id));
-  const pending = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
+  /* ---------- pantalla: falta configurar Firebase ---------- */
+  function buildConfigMissing() {
+    return h("div", { class: "nido", style: { alignItems: "center", justifyContent: "center" } },
+      h("div", { class: "identity-card", style: { textAlign: "center" } },
+        h("h1", {}, "Falta configurar Firebase"),
+        h("p", {}, "Abrí el archivo ", h("code", {}, "firebase-config.js"), " y pegá ahí la configuración de tu proyecto de Firebase. Sin eso, la app no puede guardar ni sincronizar nada.")
+      )
+    );
+  }
 
-  return (
-    <div>
-      <div className="entry-form">
-        <div className="field grow"><label>Tarea</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Sacar la basura" onKeyDown={(e) => e.key === "Enter" && add()} /></div>
-        <div className="field"><label>Para</label><select value={assignee} onChange={(e) => setAssignee(e.target.value)}><option>Cualquiera</option>{members.map((m) => <option key={m.name}>{m.name}</option>)}</select></div>
-        <button className="add-btn" onClick={add} disabled={!title.trim()}><PlusIcon size={15} /> Agregar</button>
-      </div>
-      {tasks.length === 0 ? (
-        <div className="empty-state">La lista de tareas está vacía.<br />Anoten lo que hay que hacer en casa esta semana.</div>
-      ) : (
-        <>
-          {pending.map((t) => (
-            <div className="list-row" key={t.id} style={{ "--row-color": colorFor(t.createdBy) }}>
-              <button className="check-btn" onClick={() => toggle(t.id)} />
-              <div className="row-main"><div className="row-title">{t.title}</div><div className="row-meta"><span>{t.assignee}</span></div></div>
-              <button className="icon-btn" onClick={() => remove(t.id)}><TrashIcon size={15} /></button>
-            </div>
-          ))}
-          {done.length > 0 && <div style={{ marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" }}>Hechas</div>}
-          {done.map((t) => (
-            <div className="list-row done" key={t.id} style={{ "--row-color": colorFor(t.createdBy) }}>
-              <button className="check-btn checked" onClick={() => toggle(t.id)}><CheckIcon size={13} /></button>
-              <div className="row-main"><div className="row-title strike">{t.title}</div><div className="row-meta"><span>{t.assignee}</span></div></div>
-              <button className="icon-btn" onClick={() => remove(t.id)}><TrashIcon size={15} /></button>
-            </div>
-          ))}
-        </>
-      )}
-    </div>
-  );
-}
+  /* ---------- pantalla: código de casa + contraseña ---------- */
+  function buildHouseScreen() {
+    const codeInput = h("input", { id: "input-house-code", placeholder: "Ej: casa-verde-2026", value: getLocal("nido_last_house_code", "") });
+    const passInput = h("input", { id: "input-house-pass", type: "password", placeholder: "Contraseña de la casa", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: state.houseGateBusy }, state.houseGateBusy ? "Verificando…" : "Entrar");
+    const updateBtn = () => { submitBtn.disabled = state.houseGateBusy || !codeInput.value.trim() || !passInput.value; };
+    const submit = async () => {
+      if (!codeInput.value.trim() || !passInput.value || state.houseGateBusy) return;
+      state.houseGateBusy = true; state.houseGateError = null; render();
+      setLocal("nido_last_house_code", codeInput.value.trim());
+      const result = await enterHouse(codeInput.value, passInput.value);
+      state.houseGateBusy = false;
+      if (!result.ok) state.houseGateError = result.error;
+      render();
+    };
+    codeInput.addEventListener("input", updateBtn);
+    passInput.addEventListener("input", updateBtn);
+    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    passInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+    pendingAutofocus = codeInput.value ? passInput : codeInput;
 
-/* ---------- tab: calendario ---------- */
-function CalendarioTab({ events, me, colorFor, onSave }) {
-  const [cursor, setCursor] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
-  const [selected, setSelected] = useState(todayISO());
-  const [title, setTitle] = useState("");
-  const addEvent = () => { if (!title.trim()) return; onSave([...events, { id: uid(), title: title.trim(), date: selected, createdBy: me.name }]); setTitle(""); };
-  const remove = (id) => onSave(events.filter((e) => e.id !== id));
+    return h("div", { class: "nido" },
+      h("div", { class: "identity-wrap" },
+        h("div", { class: "identity-card" },
+          h("h1", {}, "Bienvenido a Nido"),
+          h("p", {}, "El espacio de los dos para organizar la convivencia: gastos, vencimientos, tareas y fechas importantes."),
+          h("div", { class: "form-block", style: { borderTop: "none", paddingTop: "0" } },
+            h("label", {}, "Código de tu casa"),
+            codeInput,
+            h("label", {}, "Contraseña de la casa"),
+            passInput,
+            h("div", { class: "helper-text" }, "La primera vez que entren, el código y la contraseña que elijan quedan guardados como los de su casa: solo quien los conozca va a poder entrar. Usen los mismos datos en ambos celulares."),
+            state.houseGateError ? h("div", { class: "helper-text", style: { color: "var(--bad)", marginTop: "-0.5rem" } }, state.houseGateError) : null,
+            submitBtn
+          )
+        )
+      )
+    );
+  }
 
-  const { year, month } = cursor;
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  const isoFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  const eventsFor = (iso) => events.filter((e) => e.date === iso);
-  const today = todayISO();
-  const changeMonth = (delta) => { let m = month + delta, y = year; if (m < 0) { m = 11; y -= 1; } if (m > 11) { m = 0; y += 1; } setCursor({ year: y, month: m }); };
-  const dayEvents = eventsFor(selected);
+  /* ---------- pantalla: elegir quién sos ---------- */
+  function buildIdentityGate() {
+    if (!state.membersLoaded) {
+      return h("div", { class: "nido", style: { alignItems: "center", justifyContent: "center" } },
+        h("p", { style: { color: "#5C6B54" } }, "Conectando con tu casa…")
+      );
+    }
 
-  return (
-    <div>
-      <div className="cal-header">
-        <button className="cal-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeftIcon size={16} /></button>
-        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "1.1rem", textTransform: "capitalize" }}>{MESES[month]} {year}</h3>
-        <button className="cal-nav-btn" onClick={() => changeMonth(1)}><ChevronRightIcon size={16} /></button>
-      </div>
-      <div className="cal-grid">
-        {DIAS_SEMANA.map((d, i) => <div className="cal-dow" key={i}>{d}</div>)}
-        {cells.map((d, i) => {
-          if (d === null) return <div className="cal-day empty" key={i} />;
-          const iso = isoFor(d);
-          const dayEvs = eventsFor(iso);
-          return (
-            <button key={i} className={"cal-day" + (iso === today ? " today" : "") + (iso === selected ? " selected" : "")} onClick={() => setSelected(iso)}>
-              {d}
-              <div className="dots">{dayEvs.slice(0, 3).map((e) => <span key={e.id} className="dot" style={{ background: iso === selected ? "#fff" : colorFor(e.createdBy) }} />)}</div>
-            </button>
+    const usedColors = state.members.map((m) => m.color);
+    const defaultColor = PALETTE.find((c) => !usedColors.includes(c)) || PALETTE[0];
+    const currentColor = state.identityColor || defaultColor;
+
+    const nameInput = h("input", { id: "input-identity-name", placeholder: "Ej: Juli", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: true }, "Entrar");
+    const submit = () => { const clean = nameInput.value.trim(); if (!clean) return; chooseMember({ name: clean, color: currentColor }); };
+    nameInput.addEventListener("input", () => { submitBtn.disabled = !nameInput.value.trim(); });
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+
+    const showForm = state.identityAdding || state.members.length === 0;
+    if (showForm) pendingAutofocus = nameInput;
+
+    const children = [h("h1", {}, "¿Quién sos?"), h("p", {}, "Casa: ", h("strong", {}, state.house))];
+
+    if (state.members.length > 0 && !state.identityAdding) {
+      state.members.forEach((m) => {
+        children.push(h("button", { class: "member-chip", onClick: () => chooseMember(m) },
+          h("span", { class: "swatch", style: { background: m.color } }), " " + m.name
+        ));
+      });
+      children.push(h("button", { class: "member-chip", style: { color: "var(--ink-muted)", justifyContent: "center" }, onClick: () => { state.identityAdding = true; state.identityColor = null; render(); } }, "+ Soy otra persona"));
+    }
+
+    if (showForm) {
+      children.push(
+        h("div", { class: "form-block", style: { borderTop: state.members.length > 0 ? "1px solid var(--line)" : "none", paddingTop: state.members.length > 0 ? "1.25rem" : "0" } },
+          h("label", {}, "Tu nombre"),
+          nameInput,
+          h("label", {}, "Elegí tu color"),
+          h("div", { class: "color-picker" },
+            ...PALETTE.map((c) => h("button", { class: "color-dot" + (currentColor === c ? " selected" : ""), style: { background: c }, onClick: () => { state.identityColor = c; render(); } }))
+          ),
+          h("div", { style: { display: "flex", gap: "0.6rem" } },
+            submitBtn,
+            state.members.length > 0 ? h("button", { class: "ghost-btn", onClick: () => { state.identityAdding = false; render(); } }, "Volver") : null
+          )
+        )
+      );
+    }
+
+    children.push(h("button", { class: "ghost-btn", style: { marginTop: "1rem", padding: "0" }, onClick: () => leaveHouse() }, "← Cambiar de casa"));
+
+    return h("div", { class: "nido" }, h("div", { class: "identity-wrap" }, h("div", { class: "identity-card" }, ...children)));
+  }
+
+  /* ---------- app principal ---------- */
+  function buildHomeApp() {
+    const nav = h("nav", { class: "nav" },
+      ...TABS.map((t) => h("button", { class: "nav-item" + (state.activeTab === t.id ? " active" : ""), onClick: () => { state.activeTab = t.id; render(); } },
+        t.icon(17), h("span", {}, t.label)
+      ))
+    );
+
+    const sidebar = h("aside", { class: "sidebar" },
+      h("div", {},
+        h("div", { class: "brand" }, h("h1", {}, "Nido")),
+        h("div", { class: "brand-sub" }, state.members.length > 1 ? `La casa de ${state.members.map((m) => m.name).join(" y ")}` : `Casa: ${state.house}`)
+      ),
+      nav,
+      h("div", { class: "me-row" },
+        h("span", { class: "swatch", style: { background: state.me.color } }),
+        h("div", {},
+          "Sos ", h("strong", { style: { color: "var(--ink)" } }, state.me.name),
+          h("button", { class: "switch-user", onClick: () => switchUser() }, LogoutIcon(12), " Cambiar de usuario")
+        )
+      )
+    );
+
+    let tabContent;
+    if (state.activeTab === "gastos") tabContent = buildGastosTab();
+    else if (state.activeTab === "fondo") tabContent = buildFondoTab();
+    else if (state.activeTab === "vencimientos") tabContent = buildVencimientosTab();
+    else if (state.activeTab === "tareas") tabContent = buildTareasTab();
+    else tabContent = buildCalendarioTab();
+
+    const main = h("main", { class: "main" },
+      h("div", { class: "main-header" },
+        h("div", {}, h("h2", {}, TABS.find((t) => t.id === state.activeTab).label), h("p", {}, headerCopy(state.activeTab))),
+        h("div", { class: "sync-badge" }, h("span", { class: "sync-dot" }), " Sincronizado")
+      ),
+      tabContent
+    );
+
+    return h("div", { class: "nido" }, sidebar, main);
+  }
+
+  /* ---------- tab: gastos ---------- */
+  function buildGastosTab() {
+    const descInput = h("input", { id: "input-gastos-desc", placeholder: "Ej: Supermercado", value: "" });
+    const amountInput = h("input", { id: "input-gastos-amount", type: "number", placeholder: "0", value: "" });
+    const categorySelect = h("select", { id: "input-gastos-category" }, ...CAT_GASTOS.map((c) => h("option", {}, c)));
+    const dateInput = h("input", { id: "input-gastos-date", type: "date", value: todayISO() });
+    const fundCheckbox = h("input", { id: "input-gastos-fund", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+    addBtn.addEventListener("click", () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const amount = Number(amountInput.value);
+      const fromFund = fundCheckbox.checked;
+      const fundTxId = fromFund ? uid() : null;
+      const entry = { id: uid(), desc: descInput.value.trim(), amount, category: categorySelect.value, date: dateInput.value, paidBy: state.me.name, fromFund, fundTxId };
+      saveList(state.house, "expenses", [entry, ...state.expenses]);
+      if (fromFund) {
+        saveList(state.house, "fund", [{ id: fundTxId, type: "gasto", amount, desc: entry.desc, createdBy: state.me.name, date: dateInput.value }, ...state.fund]);
+      }
+    });
+
+    const totals = {};
+    state.members.forEach((m) => (totals[m.name] = 0));
+    state.expenses.forEach((e) => { totals[e.paidBy] = (totals[e.paidBy] || 0) + e.amount; });
+    const maxTotal = Math.max(1, ...Object.values(totals));
+    const totalGeneral = state.expenses.reduce((s, e) => s + e.amount, 0);
+    const balance = fundBalance();
+
+    const summary = h("div", { class: "summary" },
+      h("div", { class: "summary-card" }, h("div", { class: "label" }, "Total registrado"), h("div", { class: "value" }, money(totalGeneral))),
+      h("div", { class: "summary-card" },
+        h("div", { class: "label" }, CoinsIcon(13), " Fondo común"),
+        h("div", { class: "value" }, money(balance)),
+        h("div", { style: { fontSize: "0.72rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Se actualiza en tiempo real")
+      ),
+      ...Object.entries(totals).map(([name, val]) => h("div", { class: "summary-card" },
+        h("div", { class: "label" }, h("span", { class: "swatch", style: { background: colorFor(name) } }), name),
+        h("div", { class: "value" }, money(val)),
+        h("div", { class: "bar-track" }, h("div", { class: "bar-fill", style: { width: `${(val / maxTotal) * 100}%`, background: colorFor(name) } }))
+      ))
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field" }, h("label", {}, "Fecha"), dateInput),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, fundCheckbox, h("label", { style: { marginBottom: "0" } }, "Pagar con fondo común")),
+      addBtn
+    );
+
+    const list = state.expenses.length === 0
+      ? h("div", { class: "empty-state" }, "Todavía no cargaron ningún gasto.", h("br"), "Sumá el primero para empezar a llevar la cuenta.")
+      : h("div", {}, ...state.expenses.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.paidBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, e.desc),
+            h("div", { class: "row-meta" }, h("span", {}, e.category), h("span", {}, "·"), h("span", {}, fmtDate(e.date)), h("span", {}, "·"), h("span", {}, e.paidBy), e.fromFund ? h("span", { class: "pill good" }, "Fondo común") : null)
+          ),
+          h("div", { class: "row-amount" }, money(e.amount)),
+          h("button", { class: "icon-btn", onClick: () => {
+            saveList(state.house, "expenses", state.expenses.filter((x) => x.id !== e.id));
+            if (e.fromFund && e.fundTxId) saveList(state.house, "fund", state.fund.filter((f) => f.id !== e.fundTxId));
+          } }, TrashIcon(15))
+        )));
+
+    return h("div", {}, summary, form, list);
+  }
+
+  /* ---------- tab: fondo común ---------- */
+  function buildFondoTab() {
+    const balance = fundBalance();
+    const descInput = h("input", { id: "input-fund-desc", placeholder: "Ej: Aporte mensual", value: "" });
+    const amountInput = h("input", { id: "input-fund-amount", type: "number", placeholder: "0", value: "" });
+    const typeSelect = h("select", { id: "input-fund-type" }, h("option", { value: "ingreso" }, "Ingreso (suma)"), h("option", { value: "gasto" }, "Gasto (resta)"));
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Registrar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+    addBtn.addEventListener("click", () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const entry = { id: uid(), type: typeSelect.value, amount: Number(amountInput.value), desc: descInput.value.trim(), createdBy: state.me.name, date: todayISO() };
+      saveList(state.house, "fund", [entry, ...state.fund]);
+    });
+
+    const balanceCard = h("div", { class: "summary-card", style: { maxWidth: "320px", marginBottom: "1.5rem" } },
+      h("div", { class: "label" }, CoinsIcon(13), " Saldo actual del fondo"),
+      h("div", { class: "value", style: { fontSize: "1.9rem" } }, money(balance)),
+      h("div", { style: { fontSize: "0.78rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Cualquiera de los dos puede sumar o usar este dinero, y el saldo se sincroniza al instante en ambos celulares.")
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Tipo"), typeSelect),
+      addBtn
+    );
+
+    const list = state.fund.length === 0
+      ? h("div", { class: "empty-state" }, "El fondo común todavía no tiene movimientos.", h("br"), "Registrá el primer aporte para arrancar.")
+      : h("div", {}, ...state.fund.map((f) => h("div", { class: "list-row", style: { "--row-color": colorFor(f.createdBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, f.desc),
+            h("div", { class: "row-meta" }, h("span", {}, fmtDate(f.date)), h("span", {}, "·"), h("span", {}, f.createdBy))
+          ),
+          h("span", { class: "pill " + (f.type === "ingreso" ? "good" : "bad") }, f.type === "ingreso" ? "Ingreso" : "Gasto"),
+          h("div", { class: "row-amount", style: { color: f.type === "ingreso" ? "var(--good)" : "var(--bad)" } }, (f.type === "ingreso" ? "+ " : "− ") + money(f.amount)),
+          h("button", { class: "icon-btn", onClick: () => saveList(state.house, "fund", state.fund.filter((x) => x.id !== f.id)) }, TrashIcon(15))
+        )));
+
+    return h("div", {}, balanceCard, form, list);
+  }
+
+  /* ---------- tab: vencimientos ---------- */
+  function buildVencimientosTab() {
+    const titleInput = h("input", { id: "input-venc-title", placeholder: "Ej: Alquiler", value: "" });
+    const amountInput = h("input", { id: "input-venc-amount", type: "number", placeholder: "0", value: "" });
+    const dateInput = h("input", { id: "input-venc-date", type: "date", value: todayISO() });
+    const categorySelect = h("select", { id: "input-venc-category" }, ...CAT_VENC.map((c) => h("option", {}, c)));
+    const recurringCheckbox = h("input", { id: "input-venc-recurring", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    addBtn.addEventListener("click", () => {
+      if (!titleInput.value.trim() || !dateInput.value) return;
+      const entry = { id: uid(), title: titleInput.value.trim(), amount: amountInput.value ? Number(amountInput.value) : null, dueDate: dateInput.value, category: categorySelect.value, recurring: recurringCheckbox.checked, paid: false, createdBy: state.me.name };
+      saveList(state.house, "dues", [...state.dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    });
+
+    const togglePaid = (id) => {
+      const target = state.dues.find((d) => d.id === id);
+      let list = state.dues.map((d) => (d.id === id ? { ...d, paid: !d.paid } : d));
+      if (target && !target.paid && target.recurring) {
+        const next = new Date(target.dueDate);
+        next.setMonth(next.getMonth() + 1);
+        list = [...list, { ...target, id: uid(), paid: false, dueDate: next.toISOString().slice(0, 10) }];
+      }
+      saveList(state.house, "dues", list.sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    };
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Título"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Monto (opcional)"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Vence"), dateInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, recurringCheckbox, h("label", { style: { marginBottom: "0" } }, "Mensual")),
+      addBtn
+    );
+
+    const sorted = [...state.dues].sort((a, b) => { if (a.paid !== b.paid) return a.paid ? 1 : -1; return a.dueDate.localeCompare(b.dueDate); });
+
+    const list = sorted.length === 0
+      ? h("div", { class: "empty-state" }, "No hay vencimientos cargados.", h("br"), "Agregá el alquiler, las expensas o los servicios para no olvidarse de pagarlos.")
+      : h("div", {}, ...sorted.map((d) => {
+          const status = dueStatus(d);
+          return h("div", { class: "list-row", style: { "--row-color": colorFor(d.createdBy) } },
+            h("button", { class: "check-btn" + (d.paid ? " checked" : ""), onClick: () => togglePaid(d.id) }, d.paid ? CheckIcon(13) : null),
+            h("div", { class: "row-main" },
+              h("div", { class: "row-title" + (d.paid ? " strike" : "") }, d.title),
+              h("div", { class: "row-meta" }, h("span", {}, d.category), h("span", {}, "·"), h("span", {}, "Vence " + fmtDate(d.dueDate)), d.recurring ? h("span", {}, "· Mensual") : null)
+            ),
+            h("span", { class: "pill " + status.cls }, status.label),
+            d.amount != null ? h("div", { class: "row-amount" }, money(d.amount)) : null,
+            h("button", { class: "icon-btn", onClick: () => saveList(state.house, "dues", state.dues.filter((x) => x.id !== d.id)) }, TrashIcon(15))
           );
-        })}
-      </div>
-      <div className="day-panel">
-        <h3>{new Date(selected + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}</h3>
-        {dayEvents.length === 0 ? (
-          <p style={{ color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "1rem" }}>No hay nada anotado este día.</p>
-        ) : dayEvents.map((e) => (
-          <div className="list-row" key={e.id} style={{ "--row-color": colorFor(e.createdBy) }}>
-            <div className="row-main"><div className="row-title">{e.title}</div><div className="row-meta"><span>{e.createdBy}</span></div></div>
-            <button className="icon-btn" onClick={() => remove(e.id)}><TrashIcon size={15} /></button>
-          </div>
-        ))}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Agregar algo a este día…" style={{ flex: 1 }} onKeyDown={(e) => e.key === "Enter" && addEvent()} />
-          <button className="add-btn" onClick={addEvent} disabled={!title.trim()}><PlusIcon size={15} /></button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        }));
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    return h("div", {}, form, list);
+  }
+
+  /* ---------- tab: tareas ---------- */
+  function isTaskDoneToday(t) {
+    return t.frequency === "diaria" ? t.doneDate === todayISO() : !!t.done;
+  }
+  function buildTareasTab() {
+    const titleInput = h("input", { id: "input-tarea-title", placeholder: "Ej: Sacar la basura", value: "" });
+    const assigneeSelect = h("select", { id: "input-tarea-assignee" }, h("option", {}, "Cualquiera"), ...state.members.map((m) => h("option", {}, m.name)));
+    const frequencySelect = h("select", { id: "input-tarea-frequency" }, h("option", { value: "unica" }, "Única vez"), h("option", { value: "diaria" }, "Diaria"));
+    const timeInput = h("input", { id: "input-tarea-time", type: "time", value: "" });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const add = () => {
+      if (!titleInput.value.trim()) return;
+      const entry = {
+        id: uid(), title: titleInput.value.trim(), assignee: assigneeSelect.value,
+        frequency: frequencySelect.value, time: timeInput.value || null,
+        done: false, doneDate: null, createdBy: state.me.name,
+      };
+      saveList(state.house, "tasks", [entry, ...state.tasks]);
+      if (timeInput.value && notifSupported && Notification.permission === "default") requestNotifPermission();
+    };
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+    addBtn.addEventListener("click", add);
+
+    const toggle = (t) => {
+      if (t.frequency === "diaria") {
+        const nowDone = isTaskDoneToday(t);
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, doneDate: nowDone ? null : todayISO() } : x)));
+      } else {
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)));
+      }
+    };
+    const remove = (id) => saveList(state.house, "tasks", state.tasks.filter((t) => t.id !== id));
+    const pending = state.tasks.filter((t) => !isTaskDoneToday(t));
+    const done = state.tasks.filter((t) => isTaskDoneToday(t));
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Tarea"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Para"), assigneeSelect),
+      h("div", { class: "field" }, h("label", {}, "Repetición"), frequencySelect),
+      h("div", { class: "field" }, h("label", {}, "Horario (opcional)"), timeInput),
+      addBtn
+    );
+
+    const notifBanner = (!notifSupported || Notification.permission === "granted") ? null :
+      h("div", { class: "empty-state", style: { textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.85rem 1rem", marginBottom: "1rem" } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem" } }, BellIcon(16), h("span", {}, Notification.permission === "denied" ? "Bloqueaste las notificaciones del navegador para este sitio; activalas desde el ícono del candado si querés recordatorios." : "Activá las notificaciones para recibir un aviso a la hora de cada actividad.")),
+        Notification.permission === "denied" ? null : h("button", { class: "add-btn", onClick: () => requestNotifPermission() }, "Activar")
+      );
+
+    const rowMeta = (t) => [
+      h("span", {}, t.assignee),
+      t.frequency === "diaria" ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", RepeatIcon(11), "Diaria") : null,
+      t.time ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", BellIcon(11), t.time) : null,
+    ];
+
+    let listBody;
+    if (state.tasks.length === 0) {
+      listBody = h("div", { class: "empty-state" }, "La lista de tareas está vacía.", h("br"), "Anoten lo que hay que hacer en casa esta semana.");
+    } else {
+      listBody = h("div", {},
+        ...pending.map((t) => h("div", { class: "list-row", style: { "--row-color": colorFor(t.createdBy) } },
+          h("button", { class: "check-btn", onClick: () => toggle(t) }),
+          h("div", { class: "row-main" }, h("div", { class: "row-title" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+          h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+        )),
+        done.length > 0 ? h("div", { style: { marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Hechas hoy") : null,
+        ...done.map((t) => h("div", { class: "list-row done", style: { "--row-color": colorFor(t.createdBy) } },
+          h("button", { class: "check-btn checked", onClick: () => toggle(t) }, CheckIcon(13)),
+          h("div", { class: "row-main" }, h("div", { class: "row-title strike" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+          h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+        ))
+      );
+    }
+
+    return h("div", {}, notifBanner, form, listBody);
+  }
+
+  /* ---------- tab: calendario ---------- */
+  function buildCalendarioTab() {
+    const { year, month } = state.calCursor;
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    const isoFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const eventsFor = (iso) => state.events.filter((e) => e.date === iso);
+    const today = todayISO();
+    const changeMonth = (delta) => {
+      let m = month + delta, y = year;
+      if (m < 0) { m = 11; y -= 1; }
+      if (m > 11) { m = 0; y += 1; }
+      state.calCursor = { year: y, month: m };
+      render();
+    };
+    const dayEvents = eventsFor(state.calSelected);
+
+    const titleInput = h("input", { id: "input-cal-title", placeholder: "Agregar algo a este día…", value: "", style: { flex: "1" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15));
+    const addEvent = () => {
+      if (!titleInput.value.trim()) return;
+      saveList(state.house, "events", [...state.events, { id: uid(), title: titleInput.value.trim(), date: state.calSelected, createdBy: state.me.name }]);
+    };
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEvent(); });
+    addBtn.addEventListener("click", addEvent);
+    const remove = (id) => saveList(state.house, "events", state.events.filter((e) => e.id !== id));
+
+    const header = h("div", { class: "cal-header" },
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(-1) }, ChevronLeftIcon(16)),
+      h("h3", { style: { fontFamily: "Fraunces, serif", fontSize: "1.1rem", textTransform: "capitalize" } }, `${MESES[month]} ${year}`),
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(1) }, ChevronRightIcon(16))
+    );
+
+    const grid = h("div", { class: "cal-grid" },
+      ...DIAS_SEMANA.map((d) => h("div", { class: "cal-dow" }, d)),
+      ...cells.map((d) => {
+        if (d === null) return h("div", { class: "cal-day empty" });
+        const iso = isoFor(d);
+        const dayEvs = eventsFor(iso);
+        return h("button", { class: "cal-day" + (iso === today ? " today" : "") + (iso === state.calSelected ? " selected" : ""), onClick: () => { state.calSelected = iso; render(); } },
+          String(d),
+          h("div", { class: "dots" }, ...dayEvs.slice(0, 3).map((e) => h("span", { class: "dot", style: { background: iso === state.calSelected ? "#fff" : colorFor(e.createdBy) } })))
+        );
+      })
+    );
+
+    const panel = h("div", { class: "day-panel" },
+      h("h3", {}, new Date(state.calSelected + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })),
+      dayEvents.length === 0
+        ? h("p", { style: { color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "1rem" } }, "No hay nada anotado este día.")
+        : h("div", {}, ...dayEvents.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.createdBy) } },
+            h("div", { class: "row-main" }, h("div", { class: "row-title" }, e.title), h("div", { class: "row-meta" }, h("span", {}, e.createdBy))),
+            h("button", { class: "icon-btn", onClick: () => remove(e.id) }, TrashIcon(15))
+          ))),
+      h("div", { style: { display: "flex", gap: "0.5rem", marginTop: "0.5rem" } }, titleInput, addBtn)
+    );
+
+    return h("div", {}, header, grid, panel);
+  }
+
+  /* ---------- raíz + render ---------- */
+  function buildApp() {
+    if (!fbReady) return buildConfigMissing();
+    if (!state.house || state.houseAuthed !== state.house) return buildHouseScreen();
+    if (!state.me) return buildIdentityGate();
+    return buildHomeApp();
+  }
+
+  const root = document.getElementById("root");
+  function render() {
+    const active = document.activeElement;
+    const activeId = active && active.id ? active.id : null;
+    const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+    const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+
+    // Cualquier cosa sin confirmar en un campo (id-eado) sobrevive al redibujado,
+    // aunque el redibujado lo haya disparado otro campo (ej: elegir color mientras
+    // se escribe el nombre) o una actualización que llega en vivo desde Firebase.
+    const snapshot = {};
+    root.querySelectorAll("input[id], select[id], textarea[id]").forEach((elx) => {
+      snapshot[elx.id] = elx.type === "checkbox" || elx.type === "radio" ? { checked: elx.checked } : { value: elx.value };
+    });
+
+    pendingAutofocus = null;
+    root.innerHTML = "";
+    root.appendChild(buildApp());
+
+    for (const id in snapshot) {
+      const again = document.getElementById(id);
+      if (!again) continue;
+      if ("checked" in snapshot[id]) again.checked = snapshot[id].checked;
+      else again.value = snapshot[id].value;
+      again.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    let restored = false;
+    if (activeId) {
+      const again = document.getElementById(activeId);
+      if (again) {
+        again.focus();
+        if (selStart != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(selStart, selEnd); } catch (e) {}
+        }
+        restored = true;
+      }
+    }
+    if (!restored && pendingAutofocus) pendingAutofocus.focus();
+  }
+
+  render();
+})();
 </script>
 
 <script>

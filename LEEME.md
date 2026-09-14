@@ -70,11 +70,42 @@ La forma más simple sin instalar nada:
 ## Paso 6 — Usarla
 
 1. La primera vez, cada uno abre la app y escribe el mismo **código de casa**
-   (cualquier palabra que inventen entre los dos, ej: `casa-verde-2026`).
+   y la misma **contraseña** (cualquier palabra/número que inventen entre los
+   dos, ej. código `casa-verde-2026` y contraseña a elección). La primera
+   persona que entra con ese código+contraseña los "registra" como los de su
+   casa; a partir de ahí, cualquiera que quiera entrar necesita escribir
+   exactamente los mismos dos datos. Si alguien pone el código correcto pero
+   la contraseña incorrecta, la app se lo va a rechazar.
 2. Después cada uno elige su nombre y color.
 3. A partir de ahí, todo lo que cargue uno aparece **al instante** en el
    celular del otro (sin botón de actualizar ni demoras — la sincronización
-   ahora es en tiempo real).
+   sigue siendo en tiempo real), incluyendo el saldo del **fondo común**.
+4. En **Tareas** ahora pueden marcar una actividad como **"Diaria"** y
+   ponerle un **horario**: ese horario dispara una notificación del
+   navegador para no olvidarse (la app va a pedir permiso de notificaciones
+   la primera vez que carguen una tarea con horario — hay que aceptarlo).
+   Las tareas diarias se "reinician" solas cada día a las 00:00, sin que
+   nadie tenga que volver a cargarlas.
+5. En **Fondo común** (pestaña nueva) pueden registrar aportes y ver el
+   saldo compartido en tiempo real. Desde **Gastos**, tildando "Pagar con
+   fondo común", un gasto se descuenta automáticamente de ese saldo.
+
+⚠️ **Sobre las notificaciones:** al ser una app web (sin servidor propio),
+los avisos solo se disparan mientras el celular tiene la app abierta o
+en segundo plano reciente, y el navegador debe tener permiso concedido.
+No llegan si cerraste la app del todo o reiniciaste el celular hace rato.
+Si más adelante quieren notificaciones "push" reales (que lleguen incluso
+con la app cerrada), hace falta un paso extra con Firebase Cloud
+Messaging — avisen y lo agregamos.
+
+⚠️ **Sobre la contraseña de la casa:** este control impide que alguien
+entre a la app sin conocer el código y la contraseña, pero la base de
+datos de Firebase (según las reglas del Paso 3) sigue técnicamente abierta
+a quien tenga la URL exacta y sepa buscar por fuera de la app. Para una
+app personal, sin datos ultra sensibles, este nivel alcanza para que un
+desconocido no entre "de casualidad". Si en algún momento quieren
+seguridad a nivel de base de datos (no solo de la app), se puede sumar
+Firebase Authentication — es un paso más de configuración.
 
 ---
 
