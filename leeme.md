@@ -100,6 +100,13 @@ La forma más simple sin instalar nada:
    Ahí mismo está "Cambiar de usuario" (que a su vez, si hace falta, lleva
    a "Cambiar de casa"). En la computadora todo sigue igual que antes,
    con el menú siempre visible a la izquierda.
+7. En **Gastos** hay un botón **"Escanear factura"**: saca (o elige) una
+   foto del ticket y la app intenta completar sola la descripción, el monto
+   y la fecha. Todo el reconocimiento de texto pasa dentro del celular
+   (no se manda la foto a ningún lado), así que es gratis, pero por eso
+   mismo puede equivocarse — siempre revisen los datos antes de guardar.
+   La primera vez que lo usan, descarga ~2-5 MB para el lector de texto
+   (conviene hacerlo con wifi); las veces siguientes es más rápido.
 
 ⚠️ **Sobre las notificaciones:** al ser una app web (sin servidor propio),
 los avisos solo se disparan mientras el celular tiene la app abierta o

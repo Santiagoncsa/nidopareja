@@ -1,4 +1,4 @@
-const CACHE_NAME = "nido-shell-v6";
+const CACHE_NAME = "nido-shell-v7";
 const ASSETS = [
   "./",
   "./index.html",
