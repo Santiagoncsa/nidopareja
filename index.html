@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#23301F" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Nido" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<title>Nido — organización en pareja</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; }
+
+  .nido {
+    --bg: #EFF1E9; --surface: #FFFFFF; --surface-muted: #F7F8F2;
+    --ink: #23301F; --ink-muted: #5C6B54; --line: #D8DCC9;
+    --warn: #C98A2C; --bad: #B03A2E; --good: #3F7D5C;
+    color: var(--ink); background: var(--bg); min-height: 100vh; display: flex; width: 100%;
+  }
+  .nido h1, .nido h2, .nido h3 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
+  .nido button { font-family: inherit; cursor: pointer; }
+  .nido input, .nido select { font-family: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.65rem; outline: none; }
+  .nido input:focus, .nido select:focus { border-color: var(--ink-muted); }
+
+  .identity-wrap { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+  .identity-card { max-width: 420px; width: 100%; }
+  .identity-card h1 { font-size: 2rem; margin-bottom: 0.35rem; }
+  .identity-card p { color: var(--ink-muted); margin: 0 0 1.75rem; line-height: 1.5; }
+  .member-chip { display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left; padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .member-chip:hover { border-color: var(--ink-muted); }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; display:inline-block; }
+  .form-block { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  .form-block label { font-size: 0.8rem; color: var(--ink-muted); display: block; margin-bottom: 0.4rem; }
+  .form-block input { width: 100%; margin-bottom: 0.9rem; }
+  .color-picker { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
+  .color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; flex: none; }
+  .color-dot.selected { border-color: var(--ink); }
+  .primary-btn { background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 500; }
+  .primary-btn:disabled { opacity: 0.4; cursor: default; }
+  .ghost-btn { background: transparent; color: var(--ink-muted); border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; }
+  .helper-text { font-size: 0.78rem; color: var(--ink-muted); margin-top: -0.4rem; margin-bottom: 0.9rem; line-height: 1.4; }
+
+  .sidebar { width: 220px; flex: none; border-right: 1px solid var(--line); padding: 1.5rem 1.1rem; display: flex; flex-direction: column; gap: 1.75rem; }
+  .brand-row { display: flex; align-items: center; justify-content: space-between; }
+  .brand h1 { font-size: 1.5rem; font-style: italic; }
+  .brand-sub { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; }
+  .drawer-close { display: none; border: none; background: none; color: var(--ink-muted); padding: 0.2rem; }
+  .nav { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.6rem; border: none; background: none; border-radius: 8px; color: var(--ink-muted); font-size: 0.9rem; text-align: left; }
+  .nav-item.active { background: var(--surface); color: var(--ink); font-weight: 600; }
+  .me-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--ink-muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+  .switch-user { border: none; background: none; color: var(--ink-muted); font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; padding: 0; margin-top: 0.4rem; }
+  .switch-user:hover { color: var(--ink); }
+
+  .mobile-topbar { display: none; }
+  .drawer-backdrop { display: none; }
+
+  .main { flex: 1; padding: 2rem 2.5rem; max-width: 900px; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; }
+  .main-header h2 { font-size: 1.6rem; }
+  .main-header p { color: var(--ink-muted); margin: 0.25rem 0 0; font-size: 0.92rem; }
+  .sync-badge { display: flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 0.4rem 0.8rem; font-size: 0.78rem; color: var(--ink-muted); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
+  .empty-state { padding: 2.5rem 1.5rem; text-align: center; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-muted); font-size: 0.92rem; line-height: 1.6; }
+
+  .entry-form { background: var(--surface-muted); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label { font-size: 0.72rem; color: var(--ink-muted); }
+  .field input, .field select { min-width: 120px; }
+  .field.grow { flex: 1; min-width: 160px; }
+  .add-btn { display: flex; align-items: center; gap: 0.35rem; background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; height: fit-content; }
+  .add-btn:disabled { opacity: 0.4; }
+
+  .list-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--row-color, var(--line)); border-radius: 10px; margin-bottom: 0.55rem; }
+  .list-row.done { opacity: 0.55; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { font-size: 0.94rem; font-weight: 500; }
+  .row-title.strike { text-decoration: line-through; }
+  .row-meta { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .row-amount { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+  .pill { font-size: 0.7rem; padding: 0.15rem 0.55rem; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .pill.warn { background: #F5E4C2; color: #7A5518; }
+  .pill.bad { background: #F3D6D1; color: #7C2A20; }
+  .pill.good { background: #D9EBE0; color: #245A3D; }
+  .icon-btn { border: none; background: none; color: var(--ink-muted); padding: 0.3rem; border-radius: 6px; flex: none; }
+  .icon-btn:hover { color: var(--bad); background: var(--surface-muted); }
+  .check-btn { border: 1.5px solid var(--line); background: var(--surface); width: 22px; height: 22px; border-radius: 6px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .check-btn.checked { background: var(--good); border-color: var(--good); color: #fff; }
+  .day-pill { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 30px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.76rem; cursor: pointer; user-select: none; background: var(--surface); color: var(--ink-muted); }
+  .day-pill input { display: none; }
+  .day-pill.checked { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .schedule-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.4rem; }
+
+  .summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .summary-card { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; }
+  .summary-card .label { font-size: 0.75rem; color: var(--ink-muted); display: flex; align-items: center; gap: 0.4rem; }
+  .summary-card .value { font-family: 'Fraunces', serif; font-size: 1.4rem; margin-top: 0.25rem; }
+  .bar-track { height: 6px; border-radius: 4px; background: var(--surface-muted); margin-top: 0.5rem; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .cal-nav-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink-muted); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; margin-bottom: 1.75rem; }
+  .cal-dow { text-align: center; font-size: 0.72rem; color: var(--ink-muted); padding-bottom: 0.3rem; }
+  .cal-day { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.35rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 0.82rem; position: relative; }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.today { border-color: var(--ink); font-weight: 700; }
+  .cal-day.selected { background: var(--ink); color: #fff; }
+  .cal-day .dots { display: flex; gap: 2px; margin-top: 0.3rem; }
+  .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .day-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 1.1rem 1.2rem; }
+  .day-panel h3 { font-size: 1.05rem; margin-bottom: 0.75rem; }
+
+  @media (max-width: 760px) {
+    .nido { flex-direction: column; }
+
+    .mobile-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: calc(0.85rem + env(safe-area-inset-top, 0px)) 1rem 0.85rem;
+      border-bottom: 1px solid var(--line); background: var(--bg);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .brand-trigger { display: flex; align-items: center; gap: 0.5rem; border: none; background: none; padding: 0.2rem; color: var(--ink); }
+    .brand-trigger h1 { font-size: 1.35rem; font-style: italic; }
+    .mobile-topbar-tab { font-size: 0.85rem; color: var(--ink-muted); }
+
+    .drawer-backdrop {
+      display: block; position: fixed; inset: 0; background: rgba(20, 24, 16, 0.45);
+      z-index: 45; opacity: 0; pointer-events: none; transition: opacity 0.22s ease;
+    }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; height: 100dvh; width: 82%; max-width: 300px;
+      background: var(--bg); border-right: 1px solid var(--line); z-index: 50;
+      transform: translateX(-100%); transition: transform 0.25s ease;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: calc(1.25rem + env(safe-area-inset-top, 0px)) 1.1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+      box-shadow: 2px 0 18px rgba(0,0,0,0.12);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .drawer-close { display: block; }
+    .brand-sub { display: block; }
+    .nav-item span { display: inline; }
+    .me-row { display: flex; }
+
+    .main { padding: 1.25rem 1.1rem; }
+    .entry-form { flex-direction: column; align-items: stretch; }
+    .field input, .field select { min-width: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- Tu configuración de Firebase -->
+<script src="./firebase-config.js"></script>
+
+<!-- Nido, en JavaScript puro (sin React ni Babel: nada que se pueda romper en producción) -->
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Firebase init ---------- */
+  let fbReady = false;
+  try {
+    if (firebaseConfig.apiKey !== "PEGAR_ACA") {
+      firebase.initializeApp(firebaseConfig);
+      fbReady = true;
+    }
+  } catch (e) {
+    console.error("Error inicializando Firebase:", e);
+  }
+
+  /* ---------- helpers para construir DOM sin JSX ---------- */
+  function h(tag, opts, ...children) {
+    const node = document.createElement(tag);
+    opts = opts || {};
+    for (const key in opts) {
+      const val = opts[key];
+      if (val == null || val === false) continue;
+      if (key === "class") node.className = val;
+      else if (key === "style" && typeof val === "object") {
+        for (const sk in val) {
+          if (sk.indexOf("--") === 0) node.style.setProperty(sk, val[sk]);
+          else node.style[sk] = val[sk];
+        }
+      } else if (key.indexOf("on") === 0 && typeof val === "function") {
+        node.addEventListener(key.slice(2).toLowerCase(), val);
+      } else if (val === true) {
+        node.setAttribute(key, "");
+      } else {
+        node.setAttribute(key, val);
+      }
+    }
+    for (const child of children.flat(Infinity)) {
+      if (child == null || child === false) continue;
+      node.appendChild(child.nodeType ? child : document.createTextNode(String(child)));
+    }
+    return node;
+  }
+
+  function svg(tag, attrs, ...children) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    attrs = attrs || {};
+    for (const key in attrs) { if (attrs[key] != null) node.setAttribute(key, attrs[key]); }
+    for (const child of children.flat(Infinity)) { if (child != null) node.appendChild(child); }
+    return node;
+  }
+  function icon(paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconRect(rectAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("rect", rectAttrs), ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconCircle(circleAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("circle", circleAttrs), ...paths.map((d) => svg("path", { d }))
+    );
+  }
+
+  /* ---------- iconos (SVG inline, sin dependencias) ---------- */
+  const WalletIcon = (size) => icon(["M21 12V7H5a2 2 0 0 1 0-4h14v4", "M3 5v14a2 2 0 0 0 2 2h16v-5", "M18 12a2 2 0 0 0 0 4h4v-4Z"], size);
+  const ClockIcon = (size) => iconCircle({ cx: 12, cy: 12, r: 9 }, ["M12 7v5l3 3"], size);
+  const CheckSquareIcon = (size) => iconRect({ x: 3, y: 3, width: 18, height: 18, rx: 2 }, ["m9 12 2 2 4-4"], size);
+  const CalendarIcon = (size) => iconRect({ x: 3, y: 4, width: 18, height: 17, rx: 2 }, ["M16 2v4M8 2v4M3 9h18"], size);
+  const PlusIcon = (size) => icon(["M12 5v14M5 12h14"], size);
+  const TrashIcon = (size) => icon(["M3 6h18", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"], size);
+  const CheckIcon = (size) => icon(["M20 6 9 17l-5-5"], size);
+  const LogoutIcon = (size) => icon(["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"], size);
+  const ChevronLeftIcon = (size) => icon(["m15 18-6-6 6-6"], size);
+  const ChevronRightIcon = (size) => icon(["m9 18 6-6-6-6"], size);
+  const CoinsIcon = (size) => svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+    svg("circle", { cx: 8, cy: 8, r: 6 }),
+    svg("path", { d: "M18.09 10.37A6 6 0 1 1 10.34 18" }),
+    svg("path", { d: "M7 6h1v4" }),
+    svg("path", { d: "m16.71 13.88.7.71-2.82 2.82" })
+  );
+  const BellIcon = (size) => icon(["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"], size);
+  const RepeatIcon = (size) => icon(["m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"], size);
+  const LockIcon = (size) => iconRect({ x: 3, y: 11, width: 18, height: 11, rx: 2 }, ["M7 11V7a5 5 0 0 1 10 0v4"], size);
+  const MenuIcon = (size) => icon(["M4 6h16", "M4 12h16", "M4 18h16"], size);
+  const XIcon = (size) => icon(["M18 6 6 18", "m6 6 12 12"], size);
+
+  /* ---------- constantes ---------- */
+  const PALETTE = ["#B24B3C", "#2F6B6E", "#6B4E71", "#C98A2C", "#3D5A80", "#6B7A3B"];
+  const TABS = [
+    { id: "gastos", label: "Gastos", icon: WalletIcon },
+    { id: "fondo", label: "Fondo común", icon: CoinsIcon },
+    { id: "vencimientos", label: "Vencimientos", icon: ClockIcon },
+    { id: "tareas", label: "Tareas", icon: CheckSquareIcon },
+    { id: "calendario", label: "Calendario", icon: CalendarIcon },
+  ];
+  const CAT_GASTOS = ["Alquiler", "Expensas/Servicios", "Supermercado", "Salidas", "Otros"];
+  const FUND_PAYER = "Fondo común";
+  const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+  const WEEKDAY_ABBR = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+  const WEEKDAY_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+  const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
+  const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const todayWeekday = () => (new Date().getDay() + 6) % 7; // 0 = lunes … 6 = domingo
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* ---------- hash de contraseña (SHA-256, para el gate de acceso a la casa) ---------- */
+  async function hashPassword(pw) {
+    const enc = new TextEncoder().encode(String(pw));
+    const digest = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /* ---------- notificaciones locales para actividades con horario ---------- */
+  const notifSupported = typeof Notification !== "undefined";
+  function requestNotifPermission() {
+    if (!notifSupported) return;
+    Notification.requestPermission().then(() => render());
+  }
+  function notifiedKey(taskId, dateISO) { return `nido_notified_${taskId}_${dateISO}`; }
+  function taskAppliesToday(t) {
+    if (t.frequency === "dias") return (t.days || []).includes(todayWeekday());
+    return true;
+  }
+  function taskDoneToday(t) {
+    return t.frequency === "unica" ? !!t.done : t.doneDate === todayISO();
+  }
+  function checkTaskNotifications() {
+    if (!notifSupported || Notification.permission !== "granted") return;
+    if (!state.house || !state.me) return;
+    const today = todayISO();
+    const hm = nowHM();
+    state.tasks.forEach((t) => {
+      if (!t.timeStart) return;
+      if (!taskAppliesToday(t)) return;
+      if (taskDoneToday(t)) return;
+      if (t.timeStart !== hm) return;
+      const key = notifiedKey(t.id, today);
+      if (getLocal(key, false)) return;
+      setLocal(key, true);
+      try {
+        new Notification("Nido — recordatorio", { body: `${t.title}${t.assignee && t.assignee !== "Cualquiera" ? " · " + t.assignee : ""}${t.timeEnd ? ` (hasta ${t.timeEnd})` : ""}`, tag: key });
+      } catch (e) {}
+    });
+  }
+
+  /* ---------- Firebase helpers ---------- */
+  function dbRef(house, path) {
+    return firebase.database().ref(`nido/${house}/${path}`);
+  }
+  function subscribeList(house, path, cb) {
+    const r = dbRef(house, path);
+    const listener = (snap) => {
+      const val = snap.val();
+      cb(Array.isArray(val) ? val : val ? Object.values(val) : []);
+    };
+    r.on("value", listener);
+    return () => r.off("value", listener);
+  }
+  function saveList(house, path, list) {
+    dbRef(house, path).set(list).catch((e) => console.error("Error guardando", path, e));
+  }
+
+  /* ---------- localStorage (identidad del dispositivo) ---------- */
+  const getLocal = (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+  const setLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  /* ---------- estado global + suscripción a la casa actual ---------- */
+  const state = {
+    house: getLocal("nido_house", null),
+    houseAuthed: getLocal("nido_house_authed", null), // guarda el código de la casa ya autenticada en este dispositivo
+    me: getLocal("nido_me", null),
+    members: [], expenses: [], dues: [], tasks: [], events: [], fund: [],
+    membersLoaded: false,
+    activeTab: "gastos",
+    identityAdding: false,
+    identityColor: null,
+    calCursor: (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; })(),
+    calSelected: todayISO(),
+    houseGateBusy: false,
+    houseGateError: null,
+    mobileMenuOpen: false,
+  };
+  let pendingAutofocus = null;
+
+  let unsubHouse = null;
+  function unsubscribeHouse() { if (unsubHouse) { unsubHouse(); unsubHouse = null; } }
+  function subscribeHouse(house) {
+    unsubscribeHouse();
+    state.members = []; state.expenses = []; state.dues = []; state.tasks = []; state.events = []; state.fund = [];
+    state.membersLoaded = false;
+    const u1 = subscribeList(house, "members", (list) => { state.members = list; state.membersLoaded = true; render(); });
+    const u2 = subscribeList(house, "expenses", (list) => { state.expenses = list; render(); });
+    const u3 = subscribeList(house, "dues", (list) => { state.dues = list; render(); });
+    const u4 = subscribeList(house, "tasks", (list) => { state.tasks = list; render(); checkTaskNotifications(); });
+    const u5 = subscribeList(house, "events", (list) => { state.events = list; render(); });
+    const u6 = subscribeList(house, "fund", (list) => { state.fund = list; render(); });
+    unsubHouse = () => { u1(); u2(); u3(); u4(); u5(); u6(); };
+  }
+  if (fbReady && state.house && state.houseAuthed === state.house) subscribeHouse(state.house);
+  if (notifSupported) setInterval(checkTaskNotifications, 20000);
+
+  // Verifica (o crea, si es la primera vez) el código+contraseña de la casa.
+  // Devuelve { ok: true } o { ok: false, error: "..." }
+  async function enterHouse(codeRaw, passwordRaw) {
+    const code = codeRaw.trim().toLowerCase().replace(/\s+/g, "-");
+    const password = passwordRaw;
+    if (!code || !password) return { ok: false, error: "Completá el código y la contraseña." };
+    const metaSnap = await firebase.database().ref(`nido/${code}/meta`).once("value");
+    const meta = metaSnap.val();
+    const hash = await hashPassword(password);
+    if (!meta || !meta.passwordHash) {
+      // Casa nueva: esta contraseña queda como la contraseña de la casa.
+      await firebase.database().ref(`nido/${code}/meta`).set({ passwordHash: hash, createdAt: Date.now() });
+    } else if (meta.passwordHash !== hash) {
+      return { ok: false, error: "Código o contraseña incorrectos." };
+    }
+    state.house = code;
+    state.houseAuthed = code;
+    setLocal("nido_house", code);
+    setLocal("nido_house_authed", code);
+    subscribeHouse(code);
+    return { ok: true };
+  }
+
+  function leaveHouse() {
+    unsubscribeHouse();
+    state.house = null; state.me = null; state.houseAuthed = null;
+    setLocal("nido_house", null); setLocal("nido_me", null); setLocal("nido_house_authed", null);
+    render();
+  }
+  function switchUser() { state.me = null; setLocal("nido_me", null); render(); }
+  function toggleMobileMenu(force) {
+    state.mobileMenuOpen = typeof force === "boolean" ? force : !state.mobileMenuOpen;
+    render();
+  }
+  function chooseMember(member) {
+    if (!state.members.some((m) => m.name === member.name)) {
+      saveList(state.house, "members", [...state.members, member]);
+    }
+    state.me = member; setLocal("nido_me", member);
+    state.identityAdding = false; state.identityColor = null;
+    render();
+  }
+  function colorFor(name) {
+    const m = state.members.find((mm) => mm.name === name);
+    return m ? m.color : "#999";
+  }
+  function headerCopy(tab) {
+    switch (tab) {
+      case "gastos": return "Registren lo que va gastando cada uno para tener todo a la vista.";
+      case "fondo": return "El pozo común de la casa, actualizado al instante para los dos.";
+      case "vencimientos": return "Alquiler, expensas y servicios: que no se les pase ninguna fecha.";
+      case "tareas": return "Lo que hay que hacer en casa, repartido entre los dos.";
+      case "calendario": return "Fechas importantes para los dos.";
+      default: return "";
+    }
+  }
+  function fundBalance() {
+    return state.fund.reduce((s, m) => s + (m.type === "ingreso" ? m.amount : -m.amount), 0);
+  }
+  function dueStatus(due) {
+    if (due.paid) return { label: "Pagado", cls: "good" };
+    const days = Math.floor((new Date(due.dueDate) - new Date(todayISO())) / 86400000);
+    if (days < 0) return { label: "Vencido", cls: "bad" };
+    if (days <= 5) return { label: days === 0 ? "Vence hoy" : `Vence en ${days}d`, cls: "warn" };
+    return { label: "Al día", cls: "good" };
+  }
+
+  /* ---------- pantalla: falta configurar Firebase ---------- */
+  function buildConfigMissing() {
+    return h("div", { class: "nido", style: { alignItems: "center", justifyContent: "center" } },
+      h("div", { class: "identity-card", style: { textAlign: "center" } },
+        h("h1", {}, "Falta configurar Firebase"),
+        h("p", {}, "Abrí el archivo ", h("code", {}, "firebase-config.js"), " y pegá ahí la configuración de tu proyecto de Firebase. Sin eso, la app no puede guardar ni sincronizar nada.")
+      )
+    );
+  }
+
+  /* ---------- pantalla: código de casa + contraseña ---------- */
+  function buildHouseScreen() {
+    const codeInput = h("input", { id: "input-house-code", placeholder: "Ej: casa-verde-2026", value: getLocal("nido_last_house_code", "") });
+    const passInput = h("input", { id: "input-house-pass", type: "password", placeholder: "Contraseña de la casa", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: state.houseGateBusy }, state.houseGateBusy ? "Verificando…" : "Entrar");
+    const updateBtn = () => { submitBtn.disabled = state.houseGateBusy || !codeInput.value.trim() || !passInput.value; };
+    const submit = async () => {
+      if (!codeInput.value.trim() || !passInput.value || state.houseGateBusy) return;
+      state.houseGateBusy = true; state.houseGateError = null; render();
+      setLocal("nido_last_house_code", codeInput.value.trim());
+      const result = await enterHouse(codeInput.value, passInput.value);
+      state.houseGateBusy = false;
+      if (!result.ok) state.houseGateError = result.error;
+      render();
+    };
+    codeInput.addEventListener("input", updateBtn);
+    passInput.addEventListener("input", updateBtn);
+    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    passInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+    pendingAutofocus = codeInput.value ? passInput : codeInput;
+
+    return h("div", { class: "nido" },
+      h("div", { class: "identity-wrap" },
+        h("div", { class: "identity-card" },
+          h("h1", {}, "Bienvenido a Nido"),
+          h("p", {}, "El espacio de los dos para organizar la convivencia: gastos, vencimientos, tareas y fechas importantes."),
+          h("div", { class: "form-block", style: { borderTop: "none", paddingTop: "0" } },
+            h("label", {}, "Código de tu casa"),
+            codeInput,
+            h("label", {}, "Contraseña de la casa"),
+            passInput,
+            h("div", { class: "helper-text" }, "La primera vez que entren, el código y la contraseña que elijan quedan guardados como los de su casa: solo quien los conozca va a poder entrar. Usen los mismos datos en ambos celulares."),
+            state.houseGateError ? h("div", { class: "helper-text", style: { color: "var(--bad)", marginTop: "-0.5rem" } }, state.houseGateError) : null,
+            submitBtn
+          )
+        )
+      )
+    );
+  }
+
+  /* ---------- pantalla: elegir quién sos ---------- */
+  function buildIdentityGate() {
+    if (!state.membersLoaded) {
+      return h("div", { class: "nido", style: { alignItems: "center", justifyContent: "center" } },
+        h("p", { style: { color: "#5C6B54" } }, "Conectando con tu casa…")
+      );
+    }
+
+    const usedColors = state.members.map((m) => m.color);
+    const defaultColor = PALETTE.find((c) => !usedColors.includes(c)) || PALETTE[0];
+    const currentColor = state.identityColor || defaultColor;
+
+    const nameInput = h("input", { id: "input-identity-name", placeholder: "Ej: Juli", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: true }, "Entrar");
+    const submit = () => { const clean = nameInput.value.trim(); if (!clean) return; chooseMember({ name: clean, color: currentColor }); };
+    nameInput.addEventListener("input", () => { submitBtn.disabled = !nameInput.value.trim(); });
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+
+    const showForm = state.identityAdding || state.members.length === 0;
+    if (showForm) pendingAutofocus = nameInput;
+
+    const children = [h("h1", {}, "¿Quién sos?"), h("p", {}, "Casa: ", h("strong", {}, state.house))];
+
+    if (state.members.length > 0 && !state.identityAdding) {
+      state.members.forEach((m) => {
+        children.push(h("button", { class: "member-chip", onClick: () => chooseMember(m) },
+          h("span", { class: "swatch", style: { background: m.color } }), " " + m.name
+        ));
+      });
+      children.push(h("button", { class: "member-chip", style: { color: "var(--ink-muted)", justifyContent: "center" }, onClick: () => { state.identityAdding = true; state.identityColor = null; render(); } }, "+ Soy otra persona"));
+    }
+
+    if (showForm) {
+      children.push(
+        h("div", { class: "form-block", style: { borderTop: state.members.length > 0 ? "1px solid var(--line)" : "none", paddingTop: state.members.length > 0 ? "1.25rem" : "0" } },
+          h("label", {}, "Tu nombre"),
+          nameInput,
+          h("label", {}, "Elegí tu color"),
+          h("div", { class: "color-picker" },
+            ...PALETTE.map((c) => h("button", { class: "color-dot" + (currentColor === c ? " selected" : ""), style: { background: c }, onClick: () => { state.identityColor = c; render(); } }))
+          ),
+          h("div", { style: { display: "flex", gap: "0.6rem" } },
+            submitBtn,
+            state.members.length > 0 ? h("button", { class: "ghost-btn", onClick: () => { state.identityAdding = false; render(); } }, "Volver") : null
+          )
+        )
+      );
+    }
+
+    children.push(h("button", { class: "ghost-btn", style: { marginTop: "1rem", padding: "0" }, onClick: () => leaveHouse() }, "← Cambiar de casa"));
+
+    return h("div", { class: "nido" }, h("div", { class: "identity-wrap" }, h("div", { class: "identity-card" }, ...children)));
+  }
+
+  /* ---------- app principal ---------- */
+  function buildHomeApp() {
+    const closeMenu = () => toggleMobileMenu(false);
+    const nav = h("nav", { class: "nav" },
+      ...TABS.map((t) => h("button", { class: "nav-item" + (state.activeTab === t.id ? " active" : ""), onClick: () => { state.activeTab = t.id; state.mobileMenuOpen = false; render(); } },
+        t.icon(17), h("span", {}, t.label)
+      ))
+    );
+
+    const sidebar = h("aside", { class: "sidebar" + (state.mobileMenuOpen ? " open" : "") },
+      h("div", { class: "brand-row" },
+        h("div", {},
+          h("div", { class: "brand" }, h("h1", {}, "Nido")),
+          h("div", { class: "brand-sub" }, state.members.length > 1 ? `La casa de ${state.members.map((m) => m.name).join(" y ")}` : `Casa: ${state.house}`)
+        ),
+        h("button", { class: "drawer-close", onClick: closeMenu, "aria-label": "Cerrar menú" }, XIcon(20))
+      ),
+      nav,
+      h("div", { class: "me-row" },
+        h("span", { class: "swatch", style: { background: state.me.color } }),
+        h("div", {},
+          "Sos ", h("strong", { style: { color: "var(--ink)" } }, state.me.name),
+          h("button", { class: "switch-user", onClick: () => { closeMenu(); switchUser(); } }, LogoutIcon(12), " Cambiar de usuario")
+        )
+      )
+    );
+
+    const backdrop = h("div", { class: "drawer-backdrop" + (state.mobileMenuOpen ? " open" : ""), onClick: closeMenu });
+
+    const mobileTopbar = h("div", { class: "mobile-topbar" },
+      h("button", { class: "brand-trigger", onClick: () => toggleMobileMenu(true), "aria-label": "Abrir menú" },
+        MenuIcon(18), h("h1", {}, "Nido")
+      ),
+      h("span", { class: "mobile-topbar-tab" }, TABS.find((t) => t.id === state.activeTab).label)
+    );
+
+    let tabContent;
+    if (state.activeTab === "gastos") tabContent = buildGastosTab();
+    else if (state.activeTab === "fondo") tabContent = buildFondoTab();
+    else if (state.activeTab === "vencimientos") tabContent = buildVencimientosTab();
+    else if (state.activeTab === "tareas") tabContent = buildTareasTab();
+    else tabContent = buildCalendarioTab();
+
+    const main = h("main", { class: "main" },
+      h("div", { class: "main-header" },
+        h("div", {}, h("h2", {}, TABS.find((t) => t.id === state.activeTab).label), h("p", {}, headerCopy(state.activeTab))),
+        h("div", { class: "sync-badge" }, h("span", { class: "sync-dot" }), " Sincronizado")
+      ),
+      tabContent
+    );
+
+    return h("div", { class: "nido" }, backdrop, mobileTopbar, sidebar, main);
+  }
+
+  /* ---------- tab: gastos ---------- */
+  function buildGastosTab() {
+    const descInput = h("input", { id: "input-gastos-desc", placeholder: "Ej: Supermercado", value: "" });
+    const amountInput = h("input", { id: "input-gastos-amount", type: "number", placeholder: "0", value: "" });
+    const categorySelect = h("select", { id: "input-gastos-category" }, ...CAT_GASTOS.map((c) => h("option", {}, c)));
+    const dateInput = h("input", { id: "input-gastos-date", type: "date", value: todayISO() });
+    const fundCheckbox = h("input", { id: "input-gastos-fund", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+    addBtn.addEventListener("click", () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const amount = Number(amountInput.value);
+      const fromFund = fundCheckbox.checked;
+      const fundTxId = fromFund ? uid() : null;
+      const entry = { id: uid(), desc: descInput.value.trim(), amount, category: categorySelect.value, date: dateInput.value, paidBy: fromFund ? FUND_PAYER : state.me.name, loggedBy: state.me.name, fromFund, fundTxId };
+      saveList(state.house, "expenses", [entry, ...state.expenses]);
+      if (fromFund) {
+        saveList(state.house, "fund", [{ id: fundTxId, type: "gasto", amount, desc: entry.desc, createdBy: state.me.name, date: dateInput.value }, ...state.fund]);
+      }
+    });
+
+    const totals = {};
+    state.members.forEach((m) => (totals[m.name] = 0));
+    state.expenses.forEach((e) => { if (!e.fromFund) totals[e.paidBy] = (totals[e.paidBy] || 0) + e.amount; });
+    const maxTotal = Math.max(1, ...Object.values(totals));
+    const totalGeneral = state.expenses.reduce((s, e) => s + e.amount, 0);
+    const balance = fundBalance();
+
+    const summary = h("div", { class: "summary" },
+      h("div", { class: "summary-card" }, h("div", { class: "label" }, "Total registrado"), h("div", { class: "value" }, money(totalGeneral))),
+      h("div", { class: "summary-card" },
+        h("div", { class: "label" }, CoinsIcon(13), " Fondo común"),
+        h("div", { class: "value" }, money(balance)),
+        h("div", { style: { fontSize: "0.72rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Se actualiza en tiempo real")
+      ),
+      ...Object.entries(totals).map(([name, val]) => h("div", { class: "summary-card" },
+        h("div", { class: "label" }, h("span", { class: "swatch", style: { background: colorFor(name) } }), name),
+        h("div", { class: "value" }, money(val)),
+        h("div", { class: "bar-track" }, h("div", { class: "bar-fill", style: { width: `${(val / maxTotal) * 100}%`, background: colorFor(name) } }))
+      ))
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field" }, h("label", {}, "Fecha"), dateInput),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, fundCheckbox, h("label", { style: { marginBottom: "0" } }, "Pagar con fondo común")),
+      addBtn
+    );
+
+    const list = state.expenses.length === 0
+      ? h("div", { class: "empty-state" }, "Todavía no cargaron ningún gasto.", h("br"), "Sumá el primero para empezar a llevar la cuenta.")
+      : h("div", {}, ...state.expenses.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.paidBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, e.desc),
+            h("div", { class: "row-meta" },
+              h("span", {}, e.category), h("span", {}, "·"), h("span", {}, fmtDate(e.date)), h("span", {}, "·"),
+              h("span", {}, e.fromFund ? `Fondo común (cargado por ${e.loggedBy || e.paidBy})` : e.paidBy),
+              e.fromFund ? h("span", { class: "pill good" }, "Fondo común") : null
+            )
+          ),
+          h("div", { class: "row-amount" }, money(e.amount)),
+          h("button", { class: "icon-btn", onClick: () => {
+            saveList(state.house, "expenses", state.expenses.filter((x) => x.id !== e.id));
+            if (e.fromFund && e.fundTxId) saveList(state.house, "fund", state.fund.filter((f) => f.id !== e.fundTxId));
+          } }, TrashIcon(15))
+        )));
+
+    return h("div", {}, summary, form, list);
+  }
+
+  /* ---------- tab: fondo común ---------- */
+  function buildFondoTab() {
+    const balance = fundBalance();
+    const descInput = h("input", { id: "input-fund-desc", placeholder: "Ej: Aporte mensual", value: "" });
+    const amountInput = h("input", { id: "input-fund-amount", type: "number", placeholder: "0", value: "" });
+    const typeSelect = h("select", { id: "input-fund-type" }, h("option", { value: "ingreso" }, "Ingreso (suma)"), h("option", { value: "gasto" }, "Gasto (resta)"));
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Registrar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+    addBtn.addEventListener("click", () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const entry = { id: uid(), type: typeSelect.value, amount: Number(amountInput.value), desc: descInput.value.trim(), createdBy: state.me.name, date: todayISO() };
+      saveList(state.house, "fund", [entry, ...state.fund]);
+    });
+
+    const balanceCard = h("div", { class: "summary-card", style: { maxWidth: "320px", marginBottom: "1.5rem" } },
+      h("div", { class: "label" }, CoinsIcon(13), " Saldo actual del fondo"),
+      h("div", { class: "value", style: { fontSize: "1.9rem" } }, money(balance)),
+      h("div", { style: { fontSize: "0.78rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Cualquiera de los dos puede sumar o usar este dinero, y el saldo se sincroniza al instante en ambos celulares.")
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Tipo"), typeSelect),
+      addBtn
+    );
+
+    const list = state.fund.length === 0
+      ? h("div", { class: "empty-state" }, "El fondo común todavía no tiene movimientos.", h("br"), "Registrá el primer aporte para arrancar.")
+      : h("div", {}, ...state.fund.map((f) => h("div", { class: "list-row", style: { "--row-color": colorFor(f.createdBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, f.desc),
+            h("div", { class: "row-meta" }, h("span", {}, fmtDate(f.date)), h("span", {}, "·"), h("span", {}, f.createdBy))
+          ),
+          h("span", { class: "pill " + (f.type === "ingreso" ? "good" : "bad") }, f.type === "ingreso" ? "Ingreso" : "Gasto"),
+          h("div", { class: "row-amount", style: { color: f.type === "ingreso" ? "var(--good)" : "var(--bad)" } }, (f.type === "ingreso" ? "+ " : "− ") + money(f.amount)),
+          h("button", { class: "icon-btn", onClick: () => saveList(state.house, "fund", state.fund.filter((x) => x.id !== f.id)) }, TrashIcon(15))
+        )));
+
+    return h("div", {}, balanceCard, form, list);
+  }
+
+  /* ---------- tab: vencimientos ---------- */
+  function buildVencimientosTab() {
+    const titleInput = h("input", { id: "input-venc-title", placeholder: "Ej: Alquiler", value: "" });
+    const amountInput = h("input", { id: "input-venc-amount", type: "number", placeholder: "0", value: "" });
+    const dateInput = h("input", { id: "input-venc-date", type: "date", value: todayISO() });
+    const categorySelect = h("select", { id: "input-venc-category" }, ...CAT_VENC.map((c) => h("option", {}, c)));
+    const recurringCheckbox = h("input", { id: "input-venc-recurring", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    addBtn.addEventListener("click", () => {
+      if (!titleInput.value.trim() || !dateInput.value) return;
+      const entry = { id: uid(), title: titleInput.value.trim(), amount: amountInput.value ? Number(amountInput.value) : null, dueDate: dateInput.value, category: categorySelect.value, recurring: recurringCheckbox.checked, paid: false, createdBy: state.me.name };
+      saveList(state.house, "dues", [...state.dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    });
+
+    const togglePaid = (id) => {
+      const target = state.dues.find((d) => d.id === id);
+      let list = state.dues.map((d) => (d.id === id ? { ...d, paid: !d.paid } : d));
+      if (target && !target.paid && target.recurring) {
+        const next = new Date(target.dueDate);
+        next.setMonth(next.getMonth() + 1);
+        list = [...list, { ...target, id: uid(), paid: false, dueDate: next.toISOString().slice(0, 10) }];
+      }
+      saveList(state.house, "dues", list.sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    };
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Título"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Monto (opcional)"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Vence"), dateInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, recurringCheckbox, h("label", { style: { marginBottom: "0" } }, "Mensual")),
+      addBtn
+    );
+
+    const sorted = [...state.dues].sort((a, b) => { if (a.paid !== b.paid) return a.paid ? 1 : -1; return a.dueDate.localeCompare(b.dueDate); });
+
+    const list = sorted.length === 0
+      ? h("div", { class: "empty-state" }, "No hay vencimientos cargados.", h("br"), "Agregá el alquiler, las expensas o los servicios para no olvidarse de pagarlos.")
+      : h("div", {}, ...sorted.map((d) => {
+          const status = dueStatus(d);
+          return h("div", { class: "list-row", style: { "--row-color": colorFor(d.createdBy) } },
+            h("button", { class: "check-btn" + (d.paid ? " checked" : ""), onClick: () => togglePaid(d.id) }, d.paid ? CheckIcon(13) : null),
+            h("div", { class: "row-main" },
+              h("div", { class: "row-title" + (d.paid ? " strike" : "") }, d.title),
+              h("div", { class: "row-meta" }, h("span", {}, d.category), h("span", {}, "·"), h("span", {}, "Vence " + fmtDate(d.dueDate)), d.recurring ? h("span", {}, "· Mensual") : null)
+            ),
+            h("span", { class: "pill " + status.cls }, status.label),
+            d.amount != null ? h("div", { class: "row-amount" }, money(d.amount)) : null,
+            h("button", { class: "icon-btn", onClick: () => saveList(state.house, "dues", state.dues.filter((x) => x.id !== d.id)) }, TrashIcon(15))
+          );
+        }));
+
+    return h("div", {}, form, list);
+  }
+
+  /* ---------- tab: tareas ---------- */
+  function scheduleLabel(t) {
+    if (t.frequency === "diaria") return "Diaria";
+    if (t.frequency === "dias") {
+      const days = (t.days || []).slice().sort((a, b) => a - b).map((d) => WEEKDAY_ABBR[d]);
+      return days.length ? days.join(", ") : "Días específicos";
+    }
+    return null;
+  }
+  function timeLabel(t) {
+    if (!t.timeStart) return null;
+    return t.timeEnd ? `${t.timeStart}–${t.timeEnd}` : t.timeStart;
+  }
+
+  function buildTareasTab() {
+    const titleInput = h("input", { id: "input-tarea-title", placeholder: "Ej: Sacar la basura", value: "" });
+    const assigneeSelect = h("select", { id: "input-tarea-assignee" }, h("option", {}, "Cualquiera"), ...state.members.map((m) => h("option", {}, m.name)));
+    const frequencySelect = h("select", { id: "input-tarea-frequency" },
+      h("option", { value: "unica" }, "Única vez"),
+      h("option", { value: "diaria" }, "Diaria"),
+      h("option", { value: "dias" }, "Días específicos")
+    );
+    const timeStartInput = h("input", { id: "input-tarea-time-start", type: "time", value: "" });
+    const timeEndInput = h("input", { id: "input-tarea-time-end", type: "time", value: "" });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const dayCheckboxes = WEEKDAY_ABBR.map((abbr, i) => {
+      const cb = h("input", { type: "checkbox", id: `input-tarea-day-${i}` });
+      const lbl = h("label", { class: "day-pill" }, cb, abbr);
+      cb.addEventListener("input", () => { lbl.classList.toggle("checked", cb.checked); updateAddBtn(); });
+      return lbl;
+    });
+    const daysWrap = h("div", { class: "field", id: "tarea-days-wrap", style: { display: "none" } },
+      h("label", {}, "Días"),
+      h("div", { style: { display: "flex", gap: "0.3rem" } }, ...dayCheckboxes)
+    );
+
+    const updateAddBtn = () => {
+      const hasTitle = titleInput.value.trim().length > 0;
+      const needsDays = frequencySelect.value === "dias";
+      const hasDay = !needsDays || dayCheckboxes.some((lbl) => lbl.querySelector("input").checked);
+      addBtn.disabled = !(hasTitle && hasDay);
+    };
+    titleInput.addEventListener("input", updateAddBtn);
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) add(); });
+    frequencySelect.addEventListener("input", () => {
+      daysWrap.style.display = frequencySelect.value === "dias" ? "block" : "none";
+      updateAddBtn();
+    });
+
+    const add = () => {
+      const needsDays = frequencySelect.value === "dias";
+      const days = dayCheckboxes.reduce((acc, lbl, i) => (lbl.querySelector("input").checked ? [...acc, i] : acc), []);
+      if (!titleInput.value.trim()) return;
+      if (needsDays && days.length === 0) return;
+      const entry = {
+        id: uid(), title: titleInput.value.trim(), assignee: assigneeSelect.value,
+        frequency: frequencySelect.value, days: needsDays ? days : [],
+        timeStart: timeStartInput.value || null, timeEnd: timeEndInput.value || null,
+        done: false, doneDate: null, createdBy: state.me.name,
+      };
+      saveList(state.house, "tasks", [entry, ...state.tasks]);
+      if (timeStartInput.value && notifSupported && Notification.permission === "default") requestNotifPermission();
+    };
+    addBtn.addEventListener("click", add);
+    updateAddBtn();
+
+    const toggle = (t) => {
+      if (t.frequency === "unica") {
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)));
+      } else {
+        const nowDone = taskDoneToday(t);
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, doneDate: nowDone ? null : todayISO() } : x)));
+      }
+    };
+    const remove = (id) => saveList(state.house, "tasks", state.tasks.filter((t) => t.id !== id));
+
+    const todays = state.tasks.filter((t) => taskAppliesToday(t));
+    const pending = todays.filter((t) => !taskDoneToday(t));
+    const done = todays.filter((t) => taskDoneToday(t));
+    const notToday = state.tasks.filter((t) => t.frequency === "dias" && !taskAppliesToday(t));
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Tarea"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Para"), assigneeSelect),
+      h("div", { class: "field" }, h("label", {}, "Repetición"), frequencySelect),
+      daysWrap,
+      h("div", { class: "field" }, h("label", {}, "Desde (opcional)"), timeStartInput),
+      h("div", { class: "field" }, h("label", {}, "Hasta (opcional)"), timeEndInput),
+      addBtn
+    );
+
+    const notifBanner = (!notifSupported || Notification.permission === "granted") ? null :
+      h("div", { class: "empty-state", style: { textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.85rem 1rem", marginBottom: "1rem" } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem" } }, BellIcon(16), h("span", {}, Notification.permission === "denied" ? "Bloqueaste las notificaciones del navegador para este sitio; activalas desde el ícono del candado si querés recordatorios." : "Activá las notificaciones para recibir un aviso al empezar cada actividad.")),
+        Notification.permission === "denied" ? null : h("button", { class: "add-btn", onClick: () => requestNotifPermission() }, "Activar")
+      );
+
+    const rowMeta = (t) => [
+      h("span", {}, t.assignee),
+      scheduleLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", RepeatIcon(11), scheduleLabel(t)) : null,
+      timeLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", BellIcon(11), timeLabel(t)) : null,
+    ];
+
+    const taskRow = (t, checked) => h("div", { class: "list-row" + (checked ? " done" : ""), style: { "--row-color": colorFor(t.createdBy) } },
+      h("button", { class: "check-btn" + (checked ? " checked" : ""), onClick: () => toggle(t) }, checked ? CheckIcon(13) : null),
+      h("div", { class: "row-main" }, h("div", { class: "row-title" + (checked ? " strike" : "") }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+      h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+    );
+
+    let listBody;
+    if (state.tasks.length === 0) {
+      listBody = h("div", { class: "empty-state" }, "La lista de tareas está vacía.", h("br"), "Anoten lo que hay que hacer en casa esta semana.");
+    } else {
+      listBody = h("div", {},
+        pending.length === 0 && done.length === 0 ? h("div", { class: "empty-state" }, "Nada para hoy en la lista de tareas.") : null,
+        ...pending.map((t) => taskRow(t, false)),
+        done.length > 0 ? h("div", { style: { marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Hechas hoy") : null,
+        ...done.map((t) => taskRow(t, true)),
+        notToday.length > 0 ? h("div", { style: { marginTop: "1.5rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Programadas para otros días") : null,
+        ...notToday.map((t) => h("div", { class: "list-row", style: { "--row-color": colorFor(t.createdBy), opacity: "0.65" } },
+          h("div", { class: "row-main" }, h("div", { class: "row-title" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+          h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+        ))
+      );
+    }
+
+    return h("div", {}, notifBanner, form, listBody);
+  }
+
+  /* ---------- tab: calendario ---------- */
+  function buildCalendarioTab() {
+    const { year, month } = state.calCursor;
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    const isoFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const eventsFor = (iso) => state.events.filter((e) => e.date === iso);
+    const today = todayISO();
+    const changeMonth = (delta) => {
+      let m = month + delta, y = year;
+      if (m < 0) { m = 11; y -= 1; }
+      if (m > 11) { m = 0; y += 1; }
+      state.calCursor = { year: y, month: m };
+      render();
+    };
+    const dayEvents = eventsFor(state.calSelected);
+
+    const titleInput = h("input", { id: "input-cal-title", placeholder: "Agregar algo a este día…", value: "", style: { flex: "1" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15));
+    const addEvent = () => {
+      if (!titleInput.value.trim()) return;
+      saveList(state.house, "events", [...state.events, { id: uid(), title: titleInput.value.trim(), date: state.calSelected, createdBy: state.me.name }]);
+    };
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEvent(); });
+    addBtn.addEventListener("click", addEvent);
+    const remove = (id) => saveList(state.house, "events", state.events.filter((e) => e.id !== id));
+
+    const header = h("div", { class: "cal-header" },
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(-1) }, ChevronLeftIcon(16)),
+      h("h3", { style: { fontFamily: "Fraunces, serif", fontSize: "1.1rem", textTransform: "capitalize" } }, `${MESES[month]} ${year}`),
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(1) }, ChevronRightIcon(16))
+    );
+
+    const grid = h("div", { class: "cal-grid" },
+      ...DIAS_SEMANA.map((d) => h("div", { class: "cal-dow" }, d)),
+      ...cells.map((d) => {
+        if (d === null) return h("div", { class: "cal-day empty" });
+        const iso = isoFor(d);
+        const dayEvs = eventsFor(iso);
+        return h("button", { class: "cal-day" + (iso === today ? " today" : "") + (iso === state.calSelected ? " selected" : ""), onClick: () => { state.calSelected = iso; render(); } },
+          String(d),
+          h("div", { class: "dots" }, ...dayEvs.slice(0, 3).map((e) => h("span", { class: "dot", style: { background: iso === state.calSelected ? "#fff" : colorFor(e.createdBy) } })))
+        );
+      })
+    );
+
+    const panel = h("div", { class: "day-panel" },
+      h("h3", {}, new Date(state.calSelected + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })),
+      dayEvents.length === 0
+        ? h("p", { style: { color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "1rem" } }, "No hay nada anotado este día.")
+        : h("div", {}, ...dayEvents.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.createdBy) } },
+            h("div", { class: "row-main" }, h("div", { class: "row-title" }, e.title), h("div", { class: "row-meta" }, h("span", {}, e.createdBy))),
+            h("button", { class: "icon-btn", onClick: () => remove(e.id) }, TrashIcon(15))
+          ))),
+      h("div", { style: { display: "flex", gap: "0.5rem", marginTop: "0.5rem" } }, titleInput, addBtn)
+    );
+
+    return h("div", {}, header, grid, panel);
+  }
+
+  /* ---------- raíz + render ---------- */
+  function buildApp() {
+    if (!fbReady) return buildConfigMissing();
+    if (!state.house || state.houseAuthed !== state.house) return buildHouseScreen();
+    if (!state.me) return buildIdentityGate();
+    return buildHomeApp();
+  }
+
+  const root = document.getElementById("root");
+  function render() {
+    const active = document.activeElement;
+    const activeId = active && active.id ? active.id : null;
+    const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+    const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+
+    // Cualquier cosa sin confirmar en un campo (id-eado) sobrevive al redibujado,
+    // aunque el redibujado lo haya disparado otro campo (ej: elegir color mientras
+    // se escribe el nombre) o una actualización que llega en vivo desde Firebase.
+    const snapshot = {};
+    root.querySelectorAll("input[id], select[id], textarea[id]").forEach((elx) => {
+      snapshot[elx.id] = elx.type === "checkbox" || elx.type === "radio" ? { checked: elx.checked } : { value: elx.value };
+    });
+
+    pendingAutofocus = null;
+    root.innerHTML = "";
+    root.appendChild(buildApp());
+    document.body.style.overflow = state.mobileMenuOpen ? "hidden" : "";
+
+    for (const id in snapshot) {
+      const again = document.getElementById(id);
+      if (!again) continue;
+      if ("checked" in snapshot[id]) again.checked = snapshot[id].checked;
+      else again.value = snapshot[id].value;
+      again.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    let restored = false;
+    if (activeId) {
+      const again = document.getElementById(activeId);
+      if (again) {
+        again.focus();
+        if (selStart != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(selStart, selEnd); } catch (e) {}
+        }
+        restored = true;
+      }
+    }
+    if (!restored && pendingAutofocus) pendingAutofocus.focus();
+  }
+
+  render();
+})();
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
