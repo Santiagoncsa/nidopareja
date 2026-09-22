@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuestra Casa - App Compartida</title>
+  <meta name="description" content="App del hogar con notificaciones entre dispositivos de la casa y sección Citas y Planes con ruleta interactiva y catálogo.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f43f5e">
+  <!-- Google Fonts & Tailwind CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fbfbfd;
+      color: #1e293b;
+    }
+    h1, h2, h3, .font-display {
+      font-family: 'Outfit', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- NAVBAR SUPERIOR -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <!-- Casa Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-rose-200">
+          🏠
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="nav-casa-nombre" class="text-base font-bold text-slate-800 font-display">Hogar Compartido</h1>
+            <span id="nav-casa-codigo" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 uppercase">CASA-AMOR</span>
+          </div>
+          <p id="nav-dispositivo-usuario" class="text-xs text-slate-400">Dispositivo conectado</p>
+        </div>
+      </div>
+
+      <!-- Acciones Rápidas & Notificaciones -->
+      <div class="flex items-center gap-2">
+        <button id="btn-timbre" onclick="tocarTimbre()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-rose-200 transition-colors">
+          <span>🛎️</span>
+          <span class="hidden sm:inline">Timbre</span>
+        </button>
+
+        <button onclick="abrirNotificaciones()" class="relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+          <span class="text-sm">🔔</span>
+          <span id="badge-notificaciones" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-extrabold rounded-full">0</span>
+        </button>
+
+        <button onclick="abrirAjustesCasa()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Ajustes de Casa">
+          <span class="text-sm">⚙️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CATEGORÍAS PRINCIPALES DEL HOGAR -->
+  <nav class="border-b border-slate-200/80 bg-white/70">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto">
+      <button onclick="cambiarCategoria('citas')" id="btn-tab-citas" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-200/80 shadow-xs">
+        <span>❤️ Citas y Planes</span>
+        <span class="px-1.5 py-0.2 bg-rose-500 text-white rounded text-[10px] font-extrabold uppercase">Nueva</span>
+      </button>
+
+      <button onclick="cambiarCategoria('tareas')" id="btn-tab-tareas" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+        <span>✓ Tareas del Hogar</span>
+      </button>
+
+      <button onclick="cambiarCategoria('compras')" id="btn-tab-compras" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+        <span>🛒 Lista de Compras</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+
+    <!-- SECCIÓN: CITAS Y PLANES -->
+    <div id="seccion-citas-planes" class="space-y-6">
+      <!-- Encabezado de la categoría -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-100 rounded-full text-xs font-bold text-rose-600 mb-2">
+            ✨ Planes en Pareja
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 font-display">Citas y Planes</h2>
+          <p class="text-sm text-slate-500 mt-1">Decidan qué hacer juntos con la ruleta o inspírense en el catálogo de ideas.</p>
+        </div>
+
+        <!-- Pestañas: Indeciso vs Sin Ideas -->
+        <div class="flex items-center p-1.5 bg-slate-200/70 rounded-2xl border border-slate-200 shrink-0">
+          <button id="subtab-indeciso" onclick="cambiarSubTab('indeciso')" class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white text-rose-600 shadow-sm transition-all">
+            <span>🎡 Indeciso (Ruleta)</span>
+          </button>
+          <button id="subtab-sin-ideas" onclick="cambiarSubTab('sin_ideas')" class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-600 hover:text-slate-900 transition-all">
+            <span>💡 Sin ideas (Catálogo)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-PESTAÑA 1: INDECISO (RULETA) -->
+      <div id="vista-indeciso" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Canvas de la Ruleta -->
+        <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+          <div class="relative w-[320px] h-[320px] sm:w-[360px] sm:h-[360px]">
+            <canvas id="ruleta-canvas" width="360" height="360" class="w-full h-full drop-shadow-md"></canvas>
+          </div>
+
+          <button id="btn-girar" onclick="girarRuleta()" class="mt-6 px-8 py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-base rounded-full shadow-lg shadow-rose-200 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer">
+            <span>🔄</span>
+            <span>¡Girar Ruleta!</span>
+          </button>
+        </div>
+
+        <!-- Panel de Opciones (2 a 6) -->
+        <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Opciones en Juego</h3>
+              <p class="text-xs text-slate-500">Mínimo 2, máximo 6 opciones</p>
+            </div>
+            <span id="contador-opciones" class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600">4 de 6</span>
+          </div>
+
+          <!-- Formulario Agregar Opción -->
+          <form onsubmit="agregarOpcionRuleta(event)" class="flex gap-2">
+            <input id="input-opcion-ruleta" type="text" placeholder="Ej: Comer sushi, Cine..." maxlength="40" class="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400">
+            <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-semibold hover:bg-slate-900 transition-colors">
+              + Agregar
+            </button>
+          </form>
+
+          <!-- Listado de Opciones -->
+          <div id="lista-opciones-ruleta" class="space-y-2 max-h-[280px] overflow-y-auto pr-1"></div>
+
+          <!-- Plantillas Rápidas -->
+          <div class="pt-3 border-t border-slate-100">
+            <span class="text-xs font-semibold text-slate-400 block mb-2">Cargar Plantilla Rápida:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="cargarPlantilla(['Comer Sushi 🍣', 'Hamburguesas 🍔', 'Cocinar juntos 🍝', 'Tacos 🌮'])" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-slate-600 font-medium">Comidas</button>
+              <button onclick="cargarPlantilla(['Cine y palomitas 🎬', 'Paseo al parque 🌳', 'Juegos de mesa 🎲', 'Café y postre ☕'])" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-slate-600 font-medium">Tardes</button>
+              <button onclick="cargarPlantilla(['Maratón de series 📺', 'Pedir pizza 🍕', 'Noche de relax 🕯️', 'Cocinar postre 🍰'])" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-slate-600 font-medium">En Casa</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PESTAÑA 2: SIN IDEAS (CATÁLOGO + CRUD) -->
+      <div id="vista-sin-ideas" class="hidden space-y-6">
+        <div class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Catálogo de Ideas Prediseñadas y Personalizadas</h3>
+            <p class="text-sm text-slate-500">Explora 10 sugerencias iniciales o añade nuevos planes para la pareja.</p>
+          </div>
+          <button onclick="abrirModalAgregarIdea()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md transition-colors flex items-center gap-1.5 shrink-0">
+            <span>+ Nuevo Plan Personalizado</span>
+          </button>
+        </div>
+
+        <!-- Filtros & Búsqueda -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <button onclick="filtrarCatalogo('todos')" id="filtro-cat-todos" class="px-3 py-1.5 text-xs font-bold bg-white text-slate-800 rounded-lg shadow-xs">Todos</button>
+            <button onclick="filtrarCatalogo('sugeridos')" id="filtro-cat-sugeridos" class="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg">Sugeridos (10)</button>
+            <button onclick="filtrarCatalogo('personalizados')" id="filtro-cat-personalizados" class="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg">Personalizados</button>
+          </div>
+          <input id="input-buscar-catalogo" oninput="renderizarCatalogo()" type="text" placeholder="Buscar planes..." class="px-3.5 py-1.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full sm:w-64">
+        </div>
+
+        <!-- Grid de Tarjetas -->
+        <div id="grid-planes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: TAREAS (Placeholder) -->
+    <div id="seccion-tareas" class="hidden bg-white p-8 rounded-3xl border border-slate-100 text-center max-w-lg mx-auto">
+      <div class="text-4xl mb-3">✓</div>
+      <h3 class="text-xl font-bold font-display text-slate-800 mb-2">Tareas del Hogar</h3>
+      <p class="text-sm text-slate-500 mb-4">Esta sección se sincroniza con los miembros de la casa.</p>
+      <button onclick="cambiarCategoria('citas')" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-sm font-bold">Volver a Citas y Planes</button>
+    </div>
+
+    <!-- SECCIÓN: COMPRAS (Placeholder) -->
+    <div id="seccion-compras" class="hidden bg-white p-8 rounded-3xl border border-slate-100 text-center max-w-lg mx-auto">
+      <div class="text-4xl mb-3">🛒</div>
+      <h3 class="text-xl font-bold font-display text-slate-800 mb-2">Lista de Compras</h3>
+      <p class="text-sm text-slate-500 mb-4">Despensa compartida de la casa.</p>
+      <button onclick="cambiarCategoria('citas')" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-sm font-bold">Volver a Citas y Planes</button>
+    </div>
+
+  </main>
+
+  <!-- MODAL CELEBRACIÓN GANADOR RULETA -->
+  <div id="modal-ganador" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border border-rose-100">
+      <div class="text-4xl mb-3">🎉</div>
+      <span class="text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 px-3 py-1 rounded-full">¡Opción Elegida!</span>
+      <h3 id="texto-ganador-ruleta" class="text-2xl font-extrabold text-slate-800 my-3 font-display">Sushi</h3>
+      <p class="text-xs text-slate-500 mb-6">El destino ha elegido el plan para la casa hoy.</p>
+      <div class="space-y-2">
+        <button id="btn-notificar-pareja" onclick="notificarGanadorCasa()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+          <span>🔔</span>
+          <span>Notificar a los demás dispositivos en la casa</span>
+        </button>
+        <button onclick="cerrarModalGanador()" class="w-full py-2.5 bg-slate-100 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+          ¡Listo!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NOTIFICACIONES DE LA CASA -->
+  <div id="modal-notificaciones" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-800 text-base font-display">Notificaciones de la Casa</h3>
+          <p class="text-xs text-slate-400">Sincronización en vivo entre dispositivos</p>
+        </div>
+        <button onclick="cerrarNotificaciones()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="my-4 space-y-3">
+        <label class="text-xs font-bold text-slate-600 uppercase tracking-wider block">Alertas Rápidas:</label>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="enviarAlertaRapida('¡Hora de cenar juntos! 🍽️')" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 rounded-lg">Hora de cenar 🍽️</button>
+          <button onclick="enviarAlertaRapida('¿Qué hacemos hoy? ¡Mira Citas y Planes! 🤔')" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 rounded-lg">¿Qué hacemos? 🤔</button>
+          <button onclick="enviarAlertaRapida('¡Te toca elegir el plan en la ruleta! 🎯')" class="text-xs px-2.5 py-1 bg-slate-100 hover:bg-rose-50 text-slate-700 rounded-lg">Te toca elegir 🎯</button>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <input id="input-aviso-casa" type="text" placeholder="Escribe un mensaje para la casa..." class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <button onclick="enviarAvisoPersonalizado()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold">Enviar</button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="lista-historial-notificaciones"></div>
+    </div>
+  </div>
+
+  <!-- MODAL AGREGAR/EDITAR PLAN -->
+  <div id="modal-crud-plan" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between mb-4">
+        <h3 id="modal-plan-titulo" class="font-bold text-lg text-slate-800 font-display">Nuevo Plan Personalizado</h3>
+        <button onclick="cerrarModalPlan()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <form onsubmit="guardarPlanForm(event)" class="space-y-4">
+        <input type="hidden" id="form-plan-id">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Título del Plan *</label>
+          <input id="form-plan-title" type="text" required placeholder="Ej: Noche de pizza artesanal..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Detalles / Notas (Opcional)</label>
+          <textarea id="form-plan-desc" rows="2" placeholder="Notas, lugar, horario ideal..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Categoría</label>
+          <select id="form-plan-tag" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl">
+            <option value="Romántico">Romántico</option>
+            <option value="En Casa">En Casa</option>
+            <option value="Gastronomía">Gastronomía</option>
+            <option value="Aire Libre">Aire Libre</option>
+            <option value="Aventura">Aventura</option>
+            <option value="Relax">Relax</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="cerrarModalPlan()" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl">Guardar Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL AJUSTES CASA -->
+  <div id="modal-ajustes" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-slate-800 font-display">Ajustes de la Casa</h3>
+        <button onclick="cerrarAjustesCasa()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-500">Para conectar los dispositivos de tu pareja, ingresen el mismo <strong>Código de Casa</strong> en ambos.</p>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Código de la Casa</label>
+        <input id="input-ajustes-codigo" type="text" class="w-full px-3 py-2 uppercase font-mono font-bold text-sm bg-slate-50 border border-slate-200 rounded-xl">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Tu Nombre en este Dispositivo</label>
+        <input id="input-ajustes-usuario" type="text" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="guardarAjustesCasa()" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm">Guardar Ajustes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT MODULAR DE LÓGICA Y RULETA -->
+  <script>
+    // --- ESTADO GLOBAL ---
+    let casaConfig = {
+      casaId: localStorage.getItem("casa_id") || "CASA-AMOR",
+      casaNombre: localStorage.getItem("casa_nombre") || "Hogar Compartido",
+      usuario: localStorage.getItem("casa_usuario") || "Miembro"
+    };
+
+    // 10 Ideas Prediseñadas
+    const IDEAS_PREDEFINIDAS = [
+      { id: "p1", title: "Noche de juegos de mesa y picoteo", desc: "Tapas, bebidas ricas y partidas de juegos.", tag: "En Casa", isCustom: false },
+      { id: "p2", title: "Picnic al atardecer en el parque", desc: "Manta, snacks y ver la puesta de sol juntos.", tag: "Romántico", isCustom: false },
+      { id: "p3", title: "Paseo en bicicleta y café", desc: "Recorrido agradable y merienda deliciosa.", tag: "Aire Libre", isCustom: false },
+      { id: "p4", title: "Cocinar una receta gourmet desde cero", desc: "Pasta casera, sushi o postres elaborados.", tag: "Gastronomía", isCustom: false },
+      { id: "p5", title: "Maratón de cine temático y palomitas", desc: "Fuerte de mantas en el sofá y saga clásica.", tag: "En Casa", isCustom: false },
+      { id: "p6", title: "Tarde de museos o galería de arte", desc: "Pasear y conocer nuevas exhibiciones culturales.", tag: "Cultural", isCustom: false },
+      { id: "p7", title: "Sesión de spa casero y masajes", desc: "Velas aromáticas, música suave y mascarillas.", tag: "Relax", isCustom: false },
+      { id: "p8", title: "Cata de vinos o cervezas artesanales", desc: "Probar 3 variedades distintas en casa.", tag: "Gastronomía", isCustom: false },
+      { id: "p9", title: "Mirar las estrellas con chocolate caliente", desc: "Mirador nocturno o terraza con abrigo.", tag: "Romántico", isCustom: false },
+      { id: "p10", title: "Ruta de helados y postres artesanales", desc: "Descubrir locales nuevos en la ciudad.", tag: "Aventura", isCustom: false }
+    ];
+
+    let customIdeas = JSON.parse(localStorage.getItem("casa_custom_ideas") || "[]");
+    let opcionesRuleta = [
+      "Ir a comer sushi 🍣",
+      "Cocinar en casa y pedir helado 🍦",
+      "Probar restaurante nuevo 🍽️",
+      "Noche de cine y palomitas 🍿"
+    ];
+    let coloresRuleta = ["#f43f5e", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
+    let filtroActual = "todos";
+    let ganadorActual = "";
+    let notifications = JSON.parse(localStorage.getItem("casa_notificaciones") || "[]");
+
+    // --- INICIALIZACIÓN ---
+    document.addEventListener("DOMContentLoaded", () => {
+      actualizarHeaderCasa();
+      renderizarOpcionesRuleta();
+      dibujarRuleta();
+      renderizarCatalogo();
+      conectarCanalCasa();
+    });
+
+    function actualizarHeaderCasa() {
+      document.getElementById("nav-casa-nombre").innerText = casaConfig.casaNombre;
+      document.getElementById("nav-casa-codigo").innerText = casaConfig.casaId;
+      document.getElementById("nav-dispositivo-usuario").innerText = "Dispositivo de " + casaConfig.usuario;
+    }
+
+    // --- RULETA CANVAS ---
+    let anguloActual = 0;
+    let girando = false;
+
+    function dibujarRuleta() {
+      const canvas = document.getElementById("ruleta-canvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const r = cx - 14;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const total = opcionesRuleta.length;
+      if (total === 0) return;
+      const arc = (Math.PI * 2) / total;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(anguloActual);
+
+      for (let i = 0; i < total; i++) {
+        const angle = i * arc;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, angle, angle + arc);
+        ctx.closePath();
+        ctx.fillStyle = coloresRuleta[i % coloresRuleta.length];
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        // Texto
+        ctx.save();
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 14px 'Plus Jakarta Sans', sans-serif";
+        const txt = opcionesRuleta[i].length > 20 ? opcionesRuleta[i].slice(0, 18) + "..." : opcionesRuleta[i];
+        ctx.fillText(txt, r - 20, 5);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // Borde exterior
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+
+      // Centro
+      ctx.beginPath();
+      ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+      ctx.fillStyle = "#f43f5e";
+      ctx.fill();
+
+      // Indicador puntero superior (fijo apuntando hacia abajo)
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, 4);
+      ctx.lineTo(cx + 14, 4);
+      ctx.lineTo(cx, 26);
+      ctx.closePath();
+      ctx.fillStyle = "#1e293b";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+    }
+
+    function girarRuleta() {
+      if (girando || opcionesRuleta.length < 2) return;
+      girando = true;
+
+      const total = opcionesRuleta.length;
+      const ganadorIndex = Math.floor(Math.random() * total);
+      ganadorActual = opcionesRuleta[ganadorIndex];
+
+      const arc = (Math.PI * 2) / total;
+      const pointerAngle = (3 * Math.PI) / 2; // Arriba
+      const targetCenter = ganadorIndex * arc + arc / 2;
+      const vueltas = (5 + Math.floor(Math.random() * 3)) * Math.PI * 2;
+      const anguloFinal = anguloActual + vueltas + ((pointerAngle - (anguloActual % (Math.PI * 2)) - targetCenter + Math.PI * 4) % (Math.PI * 2));
+
+      const duracion = 4000;
+      const inicio = performance.now();
+      const anguloInicial = anguloActual;
+      const distancia = anguloFinal - anguloInicial;
+
+      function animar(ahora) {
+        const transcurrido = ahora - inicio;
+        const progreso = Math.min(transcurrido / duracion, 1);
+        const ease = 1 - Math.pow(1 - progreso, 3);
+        anguloActual = anguloInicial + distancia * ease;
+        dibujarRuleta();
+
+        if (progreso < 1) {
+          requestAnimationFrame(animar);
+        } else {
+          girando = false;
+          mostrarGanador(ganadorActual);
+        }
+      }
+      requestAnimationFrame(animar);
+    }
+
+    function mostrarGanador(texto) {
+      document.getElementById("texto-ganador-ruleta").innerText = texto;
+      document.getElementById("modal-ganador").classList.remove("hidden");
+      if (typeof confetti === "function") {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
+    }
+
+    function cerrarModalGanador() {
+      document.getElementById("modal-ganador").classList.add("hidden");
+    }
+
+    function notificarGanadorCasa() {
+      enviarNotificacion(`¡Giré la Ruleta de Citas y salió ganador: "${ganadorActual}"! 🎡`);
+      alert("¡Aviso enviado a los demás dispositivos de la casa!");
+      cerrarModalGanador();
+    }
+
+    function agregarOpcionRuleta(e) {
+      e.preventDefault();
+      const input = document.getElementById("input-opcion-ruleta");
+      const val = input.value.trim();
+      if (!val || opcionesRuleta.length >= 6) return;
+      opcionesRuleta.push(val);
+      input.value = "";
+      renderizarOpcionesRuleta();
+      dibujarRuleta();
+    }
+
+    function eliminarOpcionRuleta(idx) {
+      if (opcionesRuleta.length <= 2) {
+        alert("Debes mantener al menos 2 opciones en la ruleta.");
+        return;
+      }
+      opcionesRuleta.splice(idx, 1);
+      renderizarOpcionesRuleta();
+      dibujarRuleta();
+    }
+
+    function cargarPlantilla(items) {
+      if (girando) return;
+      opcionesRuleta = [...items];
+      renderizarOpcionesRuleta();
+      dibujarRuleta();
+    }
+
+    function renderizarOpcionesRuleta() {
+      const lista = document.getElementById("lista-opciones-ruleta");
+      document.getElementById("contador-opciones").innerText = `${opcionesRuleta.length} de 6`;
+      lista.innerHTML = "";
+
+      opcionesRuleta.forEach((opt, idx) => {
+        const item = document.createElement("div");
+        item.className = "flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-xl text-sm";
+        item.innerHTML = `
+          <div class="flex items-center gap-2 overflow-hidden">
+            <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${coloresRuleta[idx % coloresRuleta.length]}"></span>
+            <span class="truncate font-medium text-slate-700">${opt}</span>
+          </div>
+          <button onclick="eliminarOpcionRuleta(${idx})" class="text-slate-400 hover:text-rose-500 p-1 text-xs">✕</button>
+        `;
+        lista.appendChild(item);
+      });
+    }
+
+    // --- CATÁLOGO & CRUD ---
+    function renderizarCatalogo() {
+      const grid = document.getElementById("grid-planes");
+      const busqueda = (document.getElementById("input-buscar-catalogo")?.value || "").toLowerCase();
+      grid.innerHTML = "";
+
+      const todos = [
+        ...customIdeas.map(c => ({ ...c, isCustom: true })),
+        ...IDEAS_PREDEFINIDAS.map(p => ({ ...p, isCustom: false }))
+      ];
+
+      const filtrados = todos.filter(p => {
+        if (filtroActual === "sugeridos" && p.isCustom) return false;
+        if (filtroActual === "personalizados" && !p.isCustom) return false;
+        if (busqueda && !p.title.toLowerCase().includes(busqueda) && !p.tag.toLowerCase().includes(busqueda)) return false;
+        return true;
+      });
+
+      filtrados.forEach(plan => {
+        const card = document.createElement("div");
+        card.className = "bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full ${plan.isCustom ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}">${plan.tag}</span>
+              ${plan.isCustom ? '<span class="text-[11px] text-slate-400">Personalizado</span>' : ''}
+            </div>
+            <h4 class="font-bold text-slate-800 text-base mb-1">${plan.title}</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">${plan.desc || ''}</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <button onclick="transferirARuleta('${plan.title.replace(/'/g, "\\'")}')" class="text-xs font-semibold text-rose-600 hover:underline flex items-center gap-1">
+              <span>🎡 Llevar a Ruleta</span>
+            </button>
+            ${plan.isCustom ? `
+              <div class="flex items-center gap-2">
+                <button onclick="editarPlan('${plan.id}')" class="text-xs text-indigo-600 hover:underline">Editar</button>
+                <button onclick="eliminarPlan('${plan.id}')" class="text-xs text-rose-500 hover:underline">Eliminar</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function transferirARuleta(titulo) {
+      if (opcionesRuleta.length >= 6) {
+        opcionesRuleta[0] = titulo;
+      } else {
+        opcionesRuleta.unshift(titulo);
+      }
+      cambiarSubTab("indeciso");
+      renderizarOpcionesRuleta();
+      dibujarRuleta();
+      alert(`"${titulo}" ha sido agregado a las opciones de la ruleta.`);
+    }
+
+    function abrirModalAgregarIdea() {
+      document.getElementById("modal-plan-titulo").innerText = "Nuevo Plan Personalizado";
+      document.getElementById("form-plan-id").value = "";
+      document.getElementById("form-plan-title").value = "";
+      document.getElementById("form-plan-desc").value = "";
+      document.getElementById("modal-crud-plan").classList.remove("hidden");
+    }
+
+    function editarPlan(id) {
+      const plan = customIdeas.find(i => i.id === id);
+      if (!plan) return;
+      document.getElementById("modal-plan-titulo").innerText = "Editar Plan Personalizado";
+      document.getElementById("form-plan-id").value = plan.id;
+      document.getElementById("form-plan-title").value = plan.title;
+      document.getElementById("form-plan-desc").value = plan.desc || "";
+      document.getElementById("form-plan-tag").value = plan.tag || "Romántico";
+      document.getElementById("modal-crud-plan").classList.remove("hidden");
+    }
+
+    function eliminarPlan(id) {
+      if (!confirm("¿Eliminar este plan personalizado?")) return;
+      customIdeas = customIdeas.filter(i => i.id !== id);
+      localStorage.setItem("casa_custom_ideas", JSON.stringify(customIdeas));
+      renderizarCatalogo();
+    }
+
+    function guardarPlanForm(e) {
+      e.preventDefault();
+      const id = document.getElementById("form-plan-id").value;
+      const title = document.getElementById("form-plan-title").value.trim();
+      const desc = document.getElementById("form-plan-desc").value.trim();
+      const tag = document.getElementById("form-plan-tag").value;
+
+      if (!title) return;
+
+      if (id) {
+        // Actualizar
+        const idx = customIdeas.findIndex(i => i.id === id);
+        if (idx !== -1) {
+          customIdeas[idx] = { id, title, desc, tag };
+        }
+      } else {
+        // Crear
+        customIdeas.unshift({ id: "custom-" + Date.now(), title, desc, tag });
+        enviarNotificacion(`Agregó un nuevo plan: "${title}"`);
+      }
+
+      localStorage.setItem("casa_custom_ideas", JSON.stringify(customIdeas));
+      cerrarModalPlan();
+      renderizarCatalogo();
+    }
+
+    function cerrarModalPlan() {
+      document.getElementById("modal-crud-plan").classList.add("hidden");
+    }
+
+    function filtrarCatalogo(tipo) {
+      filtroActual = tipo;
+      document.querySelectorAll("[id^='filtro-cat-']").forEach(btn => {
+        btn.className = "px-3 py-1.5 text-xs font-semibold text-slate-500 rounded-lg";
+      });
+      document.getElementById("filtro-cat-" + tipo).className = "px-3 py-1.5 text-xs font-bold bg-white text-slate-800 rounded-lg shadow-xs";
+      renderizarCatalogo();
+    }
+
+    // --- NAVEGACIÓN DE PESTAÑAS ---
+    function cambiarCategoria(cat) {
+      document.getElementById("seccion-citas-planes").classList.toggle("hidden", cat !== "citas");
+      document.getElementById("seccion-tareas").classList.toggle("hidden", cat !== "tareas");
+      document.getElementById("seccion-compras").classList.toggle("hidden", cat !== "compras");
+
+      document.getElementById("btn-tab-citas").className = cat === "citas" ? "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-200/80 shadow-xs" : "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors";
+      document.getElementById("btn-tab-tareas").className = cat === "tareas" ? "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-xs" : "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors";
+      document.getElementById("btn-tab-compras").className = cat === "compras" ? "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-xs" : "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors";
+    }
+
+    function cambiarSubTab(tab) {
+      document.getElementById("vista-indeciso").classList.toggle("hidden", tab !== "indeciso");
+      document.getElementById("vista-sin-ideas").classList.toggle("hidden", tab !== "sin_ideas");
+
+      const btnInd = document.getElementById("subtab-indeciso");
+      const btnSin = document.getElementById("subtab-sin-ideas");
+
+      if (tab === "indeciso") {
+        btnInd.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white text-rose-600 shadow-sm transition-all";
+        btnSin.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-600 hover:text-slate-900 transition-all";
+        dibujarRuleta();
+      } else {
+        btnSin.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-white text-indigo-600 shadow-sm transition-all";
+        btnInd.className = "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-600 hover:text-slate-900 transition-all";
+      }
+    }
+
+    // --- NOTIFICACIONES & TIMBRE DE LA CASA ---
+    let broadcastChannel = null;
+
+    function conectarCanalCasa() {
+      if (typeof BroadcastChannel !== "undefined") {
+        broadcastChannel = new BroadcastChannel(`casa_${casaConfig.casaId}_channel`);
+        broadcastChannel.onmessage = (event) => {
+          if (event.data && event.data.type === "notification") {
+            recibirNotificacionRemota(event.data.notification);
+          }
+        };
+      }
+    }
+
+    function enviarNotificacion(mensaje) {
+      const notif = {
+        id: "notif-" + Date.now(),
+        autor: casaConfig.usuario,
+        mensaje: mensaje,
+        hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      notifications.unshift(notif);
+      localStorage.setItem("casa_notificaciones", JSON.stringify(notifications.slice(0, 30)));
+
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: "notification", notification: notif });
+      }
+
+      // También intenta llamar al endpoint local de la app
+      fetch(`/api/casa/${encodeURIComponent(casaConfig.casaId)}/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromUser: casaConfig.usuario, message: mensaje })
+      }).catch(() => {});
+    }
+
+    function recibirNotificacionRemota(notif) {
+      notifications.unshift(notif);
+      localStorage.setItem("casa_notificaciones", JSON.stringify(notifications.slice(0, 30)));
+      reproducirCampana();
+      actualizarBadgeNotificaciones();
+      alert(`[${casaConfig.casaNombre}] ${notif.autor}: ${notif.mensaje}`);
+    }
+
+    function tocarTimbre() {
+      reproducirCampana();
+      enviarNotificacion("🛎️ ¡Ding-Dong! Llamando a los miembros de la casa...");
+      alert("¡Has hecho sonar el timbre en los dispositivos vinculados a la casa!");
+    }
+
+    function enviarAlertaRapida(msg) {
+      enviarNotificacion(msg);
+      cerrarNotificaciones();
+      alert("¡Alerta rápida enviada!");
+    }
+
+    function enviarAvisoPersonalizado() {
+      const input = document.getElementById("input-aviso-casa");
+      const val = input.value.trim();
+      if (!val) return;
+      enviarNotificacion(val);
+      input.value = "";
+      cerrarNotificaciones();
+      alert("¡Aviso enviado!");
+    }
+
+    function reproducirCampana() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notes = [587.33, 880];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.5);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.12);
+          osc.stop(ctx.currentTime + idx * 0.12 + 0.5);
+        });
+      } catch (e) {}
+    }
+
+    function abrirNotificaciones() {
+      const lista = document.getElementById("lista-historial-notificaciones");
+      lista.innerHTML = "";
+      if (notifications.length === 0) {
+        lista.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No hay notificaciones recientes en ${casaConfig.casaNombre}.</div>`;
+      } else {
+        notifications.forEach(n => {
+          const item = document.createElement("div");
+          item.className = "p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs";
+          item.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-slate-700">${n.autor}</strong>
+              <span class="text-[10px] text-slate-400">${n.hora}</span>
+            </div>
+            <p class="text-slate-600">${n.mensaje}</p>
+          `;
+          lista.appendChild(item);
+        });
+      }
+      document.getElementById("modal-notificaciones").classList.remove("hidden");
+    }
+
+    function cerrarNotificaciones() {
+      document.getElementById("modal-notificaciones").classList.add("hidden");
+    }
+
+    function actualizarBadgeNotificaciones() {
+      const b = document.getElementById("badge-notificaciones");
+      if (b) {
+        b.innerText = notifications.length > 9 ? "9+" : notifications.length;
+        b.classList.remove("hidden");
+      }
+    }
+
+    function abrirAjustesCasa() {
+      document.getElementById("input-ajustes-codigo").value = casaConfig.casaId;
+      document.getElementById("input-ajustes-usuario").value = casaConfig.usuario;
+      document.getElementById("modal-ajustes").classList.remove("hidden");
+    }
+
+    function cerrarAjustesCasa() {
+      document.getElementById("modal-ajustes").classList.add("hidden");
+    }
+
+    function guardarAjustesCasa() {
+      const cod = document.getElementById("input-ajustes-codigo").value.trim().toUpperCase() || "CASA-AMOR";
+      const usr = document.getElementById("input-ajustes-usuario").value.trim() || "Miembro";
+      casaConfig.casaId = cod;
+      casaConfig.usuario = usr;
+      localStorage.setItem("casa_id", cod);
+      localStorage.setItem("casa_usuario", usr);
+      actualizarHeaderCasa();
+      conectarCanalCasa();
+      cerrarAjustesCasa();
+      alert("Ajustes guardados. Conectado a " + cod);
+    }
+  </script>
+</body>
+</html>

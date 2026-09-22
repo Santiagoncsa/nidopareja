@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#23301F" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Nido" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<title>Nido — organización en pareja</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; }
+
+  .nido {
+    --bg: #EFF1E9; --surface: #FFFFFF; --surface-muted: #F7F8F2;
+    --ink: #23301F; --ink-muted: #5C6B54; --line: #D8DCC9;
+    --warn: #C98A2C; --bad: #B03A2E; --good: #3F7D5C;
+    color: var(--ink); background: var(--bg); min-height: 100vh; display: flex; width: 100%;
+  }
+  .nido h1, .nido h2, .nido h3 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
+  .nido button { font-family: inherit; cursor: pointer; }
+  .nido input, .nido select { font-family: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.65rem; outline: none; }
+  .nido input:focus, .nido select:focus { border-color: var(--ink-muted); }
+
+  .identity-wrap { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+  .identity-card { max-width: 420px; width: 100%; }
+  .identity-card h1 { font-size: 2rem; margin-bottom: 0.35rem; }
+  .identity-card p { color: var(--ink-muted); margin: 0 0 1.75rem; line-height: 1.5; }
+  .member-chip { display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left; padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 0.6rem; font-size: 0.95rem; }
+  .member-chip:hover { border-color: var(--ink-muted); }
+  .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; display:inline-block; }
+  .form-block { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  .form-block label { font-size: 0.8rem; color: var(--ink-muted); display: block; margin-bottom: 0.4rem; }
+  .form-block input { width: 100%; margin-bottom: 0.9rem; }
+  .color-picker { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
+  .color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; flex: none; }
+  .color-dot.selected { border-color: var(--ink); }
+  .primary-btn { background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 500; }
+  .primary-btn:disabled { opacity: 0.4; cursor: default; }
+  .ghost-btn { background: transparent; color: var(--ink-muted); border: none; padding: 0.65rem 1.1rem; font-size: 0.9rem; }
+  .helper-text { font-size: 0.78rem; color: var(--ink-muted); margin-top: -0.4rem; margin-bottom: 0.9rem; line-height: 1.4; }
+
+  .sidebar { width: 220px; flex: none; border-right: 1px solid var(--line); padding: 1.5rem 1.1rem; display: flex; flex-direction: column; gap: 1.75rem; }
+  .brand-row { display: flex; align-items: center; justify-content: space-between; }
+  .brand h1 { font-size: 1.5rem; font-style: italic; }
+  .brand-sub { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; }
+  .drawer-close { display: none; border: none; background: none; color: var(--ink-muted); padding: 0.2rem; }
+  .nav { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.6rem; border: none; background: none; border-radius: 8px; color: var(--ink-muted); font-size: 0.9rem; text-align: left; }
+  .nav-item.active { background: var(--surface); color: var(--ink); font-weight: 600; }
+  .me-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--ink-muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+  .switch-user { border: none; background: none; color: var(--ink-muted); font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; padding: 0; margin-top: 0.4rem; }
+  .switch-user:hover { color: var(--ink); }
+
+  .mobile-topbar { display: none; }
+  .drawer-backdrop { display: none; }
+  .receipt-modal-backdrop { position: fixed; inset: 0; background: rgba(20, 24, 16, 0.6); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+  .receipt-modal { background: var(--bg); border-radius: 14px; padding: 0.9rem; max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
+
+  .main { flex: 1; padding: 2rem 2.5rem; max-width: 900px; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; }
+  .main-header h2 { font-size: 1.6rem; }
+  .main-header p { color: var(--ink-muted); margin: 0.25rem 0 0; font-size: 0.92rem; }
+  .sync-badge { display: flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 0.4rem 0.8rem; font-size: 0.78rem; color: var(--ink-muted); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
+  .empty-state { padding: 2.5rem 1.5rem; text-align: center; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-muted); font-size: 0.92rem; line-height: 1.6; }
+
+  .entry-form { background: var(--surface-muted); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label { font-size: 0.72rem; color: var(--ink-muted); }
+  .field input, .field select { min-width: 120px; }
+  .field.grow { flex: 1; min-width: 160px; }
+  .add-btn { display: flex; align-items: center; gap: 0.35rem; background: var(--ink); color: #fff; border: none; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem; height: fit-content; }
+  .add-btn:disabled { opacity: 0.4; }
+
+  .list-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--row-color, var(--line)); border-radius: 10px; margin-bottom: 0.55rem; }
+  .list-row.done { opacity: 0.55; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { font-size: 0.94rem; font-weight: 500; }
+  .row-title.strike { text-decoration: line-through; }
+  .row-meta { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.15rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .row-amount { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+  .pill { font-size: 0.7rem; padding: 0.15rem 0.55rem; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+  .pill.warn { background: #F5E4C2; color: #7A5518; }
+  .pill.bad { background: #F3D6D1; color: #7C2A20; }
+  .pill.good { background: #D9EBE0; color: #245A3D; }
+  .icon-btn { border: none; background: none; color: var(--ink-muted); padding: 0.3rem; border-radius: 6px; flex: none; }
+  .icon-btn:hover { color: var(--bad); background: var(--surface-muted); }
+  .check-btn { border: 1.5px solid var(--line); background: var(--surface); width: 22px; height: 22px; border-radius: 6px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .check-btn.checked { background: var(--good); border-color: var(--good); color: #fff; }
+  .day-pill { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 30px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.76rem; cursor: pointer; user-select: none; background: var(--surface); color: var(--ink-muted); }
+  .day-pill input { display: none; }
+  .day-pill.checked { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .schedule-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.4rem; }
+
+  .summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .summary-card { flex: 1; min-width: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; }
+  .summary-card .label { font-size: 0.75rem; color: var(--ink-muted); display: flex; align-items: center; gap: 0.4rem; }
+  .summary-card .value { font-family: 'Fraunces', serif; font-size: 1.4rem; margin-top: 0.25rem; }
+  .bar-track { height: 6px; border-radius: 4px; background: var(--surface-muted); margin-top: 0.5rem; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .cal-nav-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink-muted); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; margin-bottom: 1.75rem; }
+  .cal-dow { text-align: center; font-size: 0.72rem; color: var(--ink-muted); padding-bottom: 0.3rem; }
+  .cal-day { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.35rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 0.82rem; position: relative; }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.today { border-color: var(--ink); font-weight: 700; }
+  .cal-day.selected { background: var(--ink); color: #fff; }
+  .cal-day .dots { display: flex; gap: 2px; margin-top: 0.3rem; }
+  .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .day-panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 1.1rem 1.2rem; }
+  .day-panel h3 { font-size: 1.05rem; margin-bottom: 0.75rem; }
+
+  @media (max-width: 760px) {
+    .nido { flex-direction: column; }
+
+    .mobile-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: calc(0.85rem + env(safe-area-inset-top, 0px)) 1rem 0.85rem;
+      border-bottom: 1px solid var(--line); background: var(--bg);
+      position: sticky; top: 0; z-index: 20;
+    }
+    .brand-trigger { display: flex; align-items: center; gap: 0.5rem; border: none; background: none; padding: 0.2rem; color: var(--ink); }
+    .brand-trigger h1 { font-size: 1.35rem; font-style: italic; }
+    .mobile-topbar-tab { font-size: 0.85rem; color: var(--ink-muted); }
+
+    .drawer-backdrop {
+      display: block; position: fixed; inset: 0; background: rgba(20, 24, 16, 0.45);
+      z-index: 45; opacity: 0; pointer-events: none; transition: opacity 0.22s ease;
+    }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; height: 100dvh; width: 82%; max-width: 300px;
+      background: var(--bg); border-right: 1px solid var(--line); z-index: 50;
+      transform: translateX(-100%); transition: transform 0.25s ease;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: calc(1.25rem + env(safe-area-inset-top, 0px)) 1.1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+      box-shadow: 2px 0 18px rgba(0,0,0,0.12);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .drawer-close { display: block; }
+    .brand-sub { display: block; }
+    .nav-item span { display: inline; }
+    .me-row { display: flex; }
+
+    .main { padding: 1.25rem 1.1rem; }
+    .entry-form { flex-direction: column; align-items: stretch; }
+    .field input, .field select { min-width: 0; width: 100%; }
+  }
+
+  /* Estilos agregados para Citas y Planes + Notificaciones */
+  .subtabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .subtab-btn {
+    padding: 0.45rem 0.95rem; font-size: 0.85rem; font-weight: 500;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted);
+    border-radius: 20px; cursor: pointer; transition: all 0.15s ease;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+  }
+  .subtab-btn.active {
+    background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 600;
+  }
+  .roulette-container {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 1.5rem 1rem; margin-bottom: 1.5rem; position: relative;
+  }
+  .canvas-wrapper {
+    position: relative;
+    width: 290px;
+    height: 290px;
+    margin: 0.75rem auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .needle {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 13px solid transparent; border-right: 13px solid transparent;
+    border-top: 22px solid var(--bad); z-index: 10;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35));
+    pointer-events: none;
+  }
+  .roulette-spin-btn {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 54px; height: 54px; border-radius: 50%; padding: 0;
+    font-weight: 800; font-size: 0.78rem; letter-spacing: 0.5px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.28); border: 2.5px solid #FFFFFF; z-index: 5;
+    cursor: pointer; transition: transform 0.1s ease, box-shadow 0.15s ease;
+  }
+  .roulette-spin-btn:active:not(:disabled) {
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  .winner-banner {
+    background: #FAF7EE; border: 1.5px solid var(--warn); border-radius: 14px;
+    padding: 1rem 1.2rem; margin: 1rem 0; width: 100%; max-width: 440px; text-align: center;
+    box-shadow: 0 4px 14px rgba(201, 138, 44, 0.12);
+  }
+  .winner-title { font-family: 'Fraunces', serif; font-size: 1.25rem; color: var(--ink); margin: 0.25rem 0 0.5rem; }
+  .winner-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 0.75rem; }
+  
+  .alert-toast {
+    position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); right: 1rem; left: 1rem;
+    max-width: 440px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line);
+    border-left: 5px solid var(--warn); box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+    border-radius: 12px; padding: 0.85rem 1rem; display: flex; align-items: center;
+    gap: 0.75rem; z-index: 100; animation: toastSlide 0.25s ease;
+  }
+  @keyframes toastSlide { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+  
+  .bell-btn {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 20px;
+    padding: 0.35rem 0.75rem; font-size: 0.78rem; color: var(--ink);
+    display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
+  }
+  .bell-btn:hover { border-color: var(--ink); }
+  .bell-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(20, 24, 16, 0.5); z-index: 65;
+    display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+  }
+  .bell-modal {
+    background: var(--bg); border-radius: 16px; padding: 1.25rem; max-width: 420px;
+    width: 100%; box-shadow: 0 16px 45px rgba(0,0,0,0.22); border: 1px solid var(--line);
+  }
+  .bell-quick-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+  .bell-quick-item {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.65rem 0.9rem; text-align: left; font-size: 0.88rem; color: var(--ink);
+    cursor: pointer; display: flex; align-items: center; gap: 0.6rem; transition: border-color 0.15s;
+  }
+  .bell-quick-item:hover { border-color: var(--ink); background: var(--surface-muted); }
+  .plan-card {
+    display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 0.6rem;
+  }
+  .plan-card-body { flex: 1; min-width: 0; }
+  .plan-card-title { font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+  .plan-card-desc { font-size: 0.82rem; color: var(--ink-muted); line-height: 1.4; margin-top: 0.2rem; }
+  .plan-actions { display: flex; gap: 0.35rem; align-items: center; flex: none; }
+
+  /* ---------- Modo Oscuro ---------- */
+  body.dark {
+    background: #141A13;
+  }
+  .nido.dark, body.dark .nido {
+    --bg: #151C14;
+    --surface: #1E271D;
+    --surface-muted: #263224;
+    --ink: #EAF0E7;
+    --ink-muted: #A3B59D;
+    --line: #2E3C2B;
+    --warn: #E4A94B;
+    --bad: #E06D60;
+    --good: #5EB386;
+    color-scheme: dark;
+  }
+  .nido.dark .primary-btn,
+  .nido.dark .add-btn,
+  .nido.dark .subtab-btn.active {
+    background: #EAF0E7;
+    color: #141A13;
+    border-color: #EAF0E7;
+  }
+  .nido.dark .primary-btn:hover,
+  .nido.dark .add-btn:hover,
+  .nido.dark .subtab-btn.active:hover {
+    background: #D8E0D5;
+  }
+  .nido.dark .cal-day.selected {
+    background: #EAF0E7;
+    color: #141A13;
+  }
+  .nido.dark .cal-day.today {
+    border-color: #EAF0E7;
+  }
+  .nido.dark .day-pill.checked {
+    background: #EAF0E7;
+    color: #141A13;
+    border-color: #EAF0E7;
+  }
+  .nido.dark .pill.warn { background: rgba(228, 169, 75, 0.22); color: #F7D488; }
+  .nido.dark .pill.bad { background: rgba(224, 109, 96, 0.22); color: #FCA59C; }
+  .nido.dark .pill.good { background: rgba(94, 179, 134, 0.22); color: #8BE0B1; }
+  .nido.dark .winner-banner {
+    background: #252D1F;
+    border-color: var(--warn);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .nido.dark .roulette-spin-btn {
+    border-color: #263224;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  }
+  .nido.dark .bell-quick-item:hover {
+    background: var(--surface-muted);
+  }
+
+  /* Selector de tema accesible a simple vista */
+  .theme-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 2px;
+    gap: 2px;
+    flex: none;
+  }
+  .theme-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+  }
+  .theme-btn:hover {
+    color: var(--ink);
+  }
+  .theme-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .nido.dark .theme-btn.active {
+    background: #EAF0E7;
+    color: #141A13;
+  }
+
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- Tu configuración de Firebase -->
+<script src="./firebase-config.js"></script>
+
+<!-- Nido, en JavaScript puro (sin React ni Babel: nada que se pueda romper en producción) -->
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Firebase init ---------- */
+  let fbReady = false;
+  try {
+    if (firebaseConfig.apiKey !== "PEGAR_ACA") {
+      firebase.initializeApp(firebaseConfig);
+      fbReady = true;
+    }
+  } catch (e) {
+    console.error("Error inicializando Firebase:", e);
+  }
+
+  /* ---------- helpers para construir DOM sin JSX ---------- */
+  function h(tag, opts, ...children) {
+    const node = document.createElement(tag);
+    opts = opts || {};
+    for (const key in opts) {
+      const val = opts[key];
+      if (val == null || val === false) continue;
+      if (key === "class") node.className = val;
+      else if (key === "style" && typeof val === "object") {
+        for (const sk in val) {
+          if (sk.indexOf("--") === 0) node.style.setProperty(sk, val[sk]);
+          else node.style[sk] = val[sk];
+        }
+      } else if (key.indexOf("on") === 0 && typeof val === "function") {
+        node.addEventListener(key.slice(2).toLowerCase(), val);
+      } else if (val === true) {
+        node.setAttribute(key, "");
+      } else {
+        node.setAttribute(key, val);
+      }
+    }
+    for (const child of children.flat(Infinity)) {
+      if (child == null || child === false) continue;
+      node.appendChild(child.nodeType ? child : document.createTextNode(String(child)));
+    }
+    return node;
+  }
+
+  function svg(tag, attrs, ...children) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    attrs = attrs || {};
+    for (const key in attrs) { if (attrs[key] != null) node.setAttribute(key, attrs[key]); }
+    for (const child of children.flat(Infinity)) { if (child != null) node.appendChild(child); }
+    return node;
+  }
+  function icon(paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconRect(rectAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("rect", rectAttrs), ...paths.map((d) => svg("path", { d }))
+    );
+  }
+  function iconCircle(circleAttrs, paths, size) {
+    return svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+      svg("circle", circleAttrs), ...paths.map((d) => svg("path", { d }))
+    );
+  }
+
+  /* ---------- iconos (SVG inline, sin dependencias) ---------- */
+  const WalletIcon = (size) => icon(["M21 12V7H5a2 2 0 0 1 0-4h14v4", "M3 5v14a2 2 0 0 0 2 2h16v-5", "M18 12a2 2 0 0 0 0 4h4v-4Z"], size);
+  const ClockIcon = (size) => iconCircle({ cx: 12, cy: 12, r: 9 }, ["M12 7v5l3 3"], size);
+  const CheckSquareIcon = (size) => iconRect({ x: 3, y: 3, width: 18, height: 18, rx: 2 }, ["m9 12 2 2 4-4"], size);
+  const CalendarIcon = (size) => iconRect({ x: 3, y: 4, width: 18, height: 17, rx: 2 }, ["M16 2v4M8 2v4M3 9h18"], size);
+  const PlusIcon = (size) => icon(["M12 5v14M5 12h14"], size);
+  const TrashIcon = (size) => icon(["M3 6h18", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"], size);
+  const CheckIcon = (size) => icon(["M20 6 9 17l-5-5"], size);
+  const LogoutIcon = (size) => icon(["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"], size);
+  const ChevronLeftIcon = (size) => icon(["m15 18-6-6 6-6"], size);
+  const ChevronRightIcon = (size) => icon(["m9 18 6-6-6-6"], size);
+  const CoinsIcon = (size) => svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+    svg("circle", { cx: 8, cy: 8, r: 6 }),
+    svg("path", { d: "M18.09 10.37A6 6 0 1 1 10.34 18" }),
+    svg("path", { d: "M7 6h1v4" }),
+    svg("path", { d: "m16.71 13.88.7.71-2.82 2.82" })
+  );
+  const BellIcon = (size) => icon(["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"], size);
+  const RepeatIcon = (size) => icon(["m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"], size);
+  const LockIcon = (size) => iconRect({ x: 3, y: 11, width: 18, height: 11, rx: 2 }, ["M7 11V7a5 5 0 0 1 10 0v4"], size);
+  const MenuIcon = (size) => icon(["M4 6h16", "M4 12h16", "M4 18h16"], size);
+  const XIcon = (size) => icon(["M18 6 6 18", "m6 6 12 12"], size);
+  const CameraIcon = (size) => iconCircle({ cx: 12, cy: 13, r: 3.5 }, ["M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.5l1.7-2.4A2 2 0 0 1 9.8 2.6h4.4a2 2 0 0 1 1.6 1L17.5 6H21a2 2 0 0 1 2 2Z"], size);
+  const SunIcon = (size) => iconCircle({ cx: 12, cy: 12, r: 4 }, [
+    "M12 2v2", "M12 20v2", "m4.93 4.93 1.41 1.41", "m17.66 17.66 1.41 1.41",
+    "M2 12h2", "M20 12h2", "m6.34 17.66-1.41 1.41", "m19.07 4.93-1.41 1.41"
+  ], size);
+  const MoonIcon = (size) => icon(["M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"], size);
+
+  
+  /* ---------- Sonidos sintetizados (Web Audio API: 100% autónomo) ---------- */
+  function getAudioCtx() {
+    if (!window._audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) window._audioCtx = new AudioContext();
+    }
+    if (window._audioCtx && window._audioCtx.state === "suspended") {
+      window._audioCtx.resume().catch(() => {});
+    }
+    return window._audioCtx;
+  }
+
+  function playDingDong() {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      // Ding (E5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(659.25, now);
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.28, now + 0.04);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.6);
+
+      // Dong (C5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(523.25, now + 0.24);
+      gain2.gain.setValueAtTime(0, now + 0.24);
+      gain2.gain.linearRampToValueAtTime(0.32, now + 0.28);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.24);
+      osc2.stop(now + 1.0);
+    } catch (e) {}
+  }
+
+  function playTick() {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(520, now);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.045);
+    } catch (e) {}
+  }
+
+  function playFanfare() {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
+        const now = ctx.currentTime + idx * 0.11;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx === 3 ? 0.65 : 0.25));
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.7);
+      });
+    } catch (e) {}
+  }
+
+  /* Nuevos iconos */
+  const HeartIcon = (size) => icon(["M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"], size);
+  const DicesIcon = (size) => svg("svg", { width: size || 16, height: size || 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+    svg("rect", { width: "12", height: "12", x: "2", y: "10", rx: "2", ry: "2" }),
+    svg("path", { d: "m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3.18l-5.74-5.74a2.24 2.24 0 0 0-3.18 0L9 5.08" }),
+    svg("path", { d: "M6 14h.01" }),
+    svg("path", { d: "M10 18h.01" }),
+    svg("path", { d: "M15 6h.01" })
+  );
+  const EditIcon = (size) => icon(["M12 20h9", "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"], size);
+  const SparklesIcon = (size) => icon(["m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"], size);
+  const DownloadIcon = (size) => icon(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "m7 10 5 5 5-5", "M12 15V3"], size);
+
+  /* ---------- constantes ---------- */
+  const PALETTE = ["#B24B3C", "#2F6B6E", "#6B4E71", "#C98A2C", "#3D5A80", "#6B7A3B"];
+  const TABS = [
+    { id: "gastos", label: "Gastos", icon: WalletIcon },
+    { id: "fondo", label: "Fondo común", icon: CoinsIcon },
+    { id: "vencimientos", label: "Vencimientos", icon: ClockIcon },
+    { id: "tareas", label: "Tareas", icon: CheckSquareIcon },
+    { id: "citas", label: "Citas y Planes", icon: HeartIcon },
+    { id: "calendario", label: "Calendario", icon: CalendarIcon },
+  ];
+  
+  const DEFAULT_CITAS_PLANS = [
+    { id: "plan-1", title: "Noche de películas y pochoclos caseros", tag: "En casa", desc: "Elegir una peli o maratón que ninguno haya visto, apagar luces y preparar algo rico.", createdBy: "Nido" },
+    { id: "plan-2", title: "Cena sorpresa: cada uno prepara un plato", tag: "Romántico", desc: "Uno cocina la entrada/plato principal y el otro el postre sin revelarlo antes.", createdBy: "Nido" },
+    { id: "plan-3", title: "Paseo y heladería artesanal en un barrio nuevo", tag: "Salida", desc: "Caminar sin rumbo fijo y probar gustos exóticos que nunca pidieron.", createdBy: "Nido" },
+    { id: "plan-4", title: "Picnic al atardecer en el parque", tag: "Aire libre", desc: "Llevar una manta, mate, frutas o vino y desconectar de los celulares.", createdBy: "Nido" },
+    { id: "plan-5", title: "Visitar una cafetería o bar de especialidad", tag: "Salida", desc: "Conocer un rinconcito nuevo con buena música y ricos cafés o tragos.", createdBy: "Nido" },
+    { id: "plan-6", title: "Tarde de juegos de mesa o cartas", tag: "En casa", desc: "Competencia divertida con picada, snacks y música de fondo.", createdBy: "Nido" },
+    { id: "plan-7", title: "Noche de spa casero y masajes", tag: "Relax", desc: "Música tranquila, aceites esenciales, mascarillas y relajación total.", createdBy: "Nido" },
+    { id: "plan-8", title: "Ir al cine a ver una función al azar", tag: "Salida", desc: "Llegar a la boletería y sacar para la película que empiece más pronto.", createdBy: "Nido" },
+    { id: "plan-9", title: "Desayuno en la cama el domingo", tag: "En casa", desc: "Tostadas calientes, café recién hecho y fiaca juntos sin despertadores.", createdBy: "Nido" },
+    { id: "plan-10", title: "Cocinar juntos pasta casera o pizza", tag: "Cocina", desc: "Amasar desde cero con buena música y una copita de vino.", createdBy: "Nido" }
+  ];
+
+  const CAT_GASTOS = ["Alquiler", "Expensas/Servicios", "Supermercado", "Salidas", "Otros"];
+  const FUND_PAYER = "Fondo común";
+  const CAT_VENC = ["Alquiler", "Servicios", "Tarjeta", "Otros"];
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const DIAS_SEMANA = ["L", "M", "M", "J", "V", "S", "D"];
+  const WEEKDAY_ABBR = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+  const WEEKDAY_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+  const money = (n) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(n) || 0);
+  const fmtDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" }); };
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const todayWeekday = () => (new Date().getDay() + 6) % 7; // 0 = lunes … 6 = domingo
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* ---------- hash de contraseña (SHA-256, para el gate de acceso a la casa) ---------- */
+  async function hashPassword(pw) {
+    const enc = new TextEncoder().encode(String(pw));
+    const digest = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /* ---------- OCR de facturas (100% en el dispositivo, con Tesseract.js) ---------- */
+  let tesseractLoadPromise = null;
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("No se pudo descargar el lector de facturas (revisá la conexión)."));
+      document.head.appendChild(s);
+    });
+    return tesseractLoadPromise;
+  }
+  let ocrWorkerPromise = null;
+  let ocrProgressCb = null;
+  function getOcrWorker() {
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = loadTesseract().then(() => Tesseract.createWorker("spa", undefined, {
+        logger: (m) => { if (ocrProgressCb && m.status === "recognizing text") ocrProgressCb(Math.round((m.progress || 0) * 100)); },
+      }));
+    }
+    return ocrWorkerPromise;
+  }
+  async function runOcr(file, onProgress) {
+    ocrProgressCb = onProgress || null;
+    const worker = await getOcrWorker();
+    const { data } = await worker.recognize(file);
+    ocrProgressCb = null;
+    return data.text || "";
+  }
+  // Convierte números en formato argentino ("1.234,56", "12.500" o "1234,56") a Number.
+  function parseArNumber(str) {
+    let s = String(str).replace(/[^\d.,]/g, "");
+    if (s.includes(".") && s.includes(",")) {
+      // Los dos separadores presentes: el punto siempre es de miles, la coma es decimal.
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else if (s.includes(",")) {
+      // Solo coma: es el separador decimal.
+      s = s.replace(",", ".");
+    } else if (s.includes(".")) {
+      const parts = s.split(".");
+      const last = parts[parts.length - 1];
+      if (parts.length > 2 || last.length === 3) {
+        // Más de un punto, o un solo punto seguido de 3 dígitos: son separadores de miles ("12.500" = 12500).
+        s = parts.join("");
+      }
+      // Un solo punto seguido de 1-2 dígitos ("12.5" o "12.50"): se interpreta como decimal, se deja igual.
+    }
+    return parseFloat(s);
+  }
+  // Heurísticas simples para adivinar monto, fecha, descripción y categoría a partir del texto leído.
+  const CATEGORY_KEYWORDS = [
+    { cat: "Supermercado", words: ["supermercado", "market", "almacen", "hipermercado", "carrefour", "coto", "dia %", "disco", "jumbo", "chino", "verduleria", "carniceria", "kiosco"] },
+    { cat: "Salidas", words: ["restaurant", "resto", "bar ", "cafeteria", "pizzeria", "heladeria", "cine", "boliche", "delivery", "pedidosya", "rappi", "parrilla"] },
+    { cat: "Expensas/Servicios", words: ["expensas", "edenor", "edesur", "metrogas", "aysa", "telecom", "movistar", "personal", "claro", "internet", "consorcio", "abl", " gas ", "factura de servicio"] },
+    { cat: "Alquiler", words: ["alquiler", "inmobiliaria", " renta "] },
+  ];
+  function guessCategory(text) {
+    const norm = " " + text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") + " ";
+    for (const group of CATEGORY_KEYWORDS) {
+      if (group.words.some((w) => norm.includes(w))) return group.cat;
+    }
+    return null;
+  }
+  function extractInvoiceData(rawText) {
+    const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    // Montos agrupados de a 3 (miles) con o sin decimales, o números sueltos con hasta 2 decimales.
+    const numberPattern = /\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+    const totalKeywords = /total|importe|monto|a\s*pagar/i;
+    let amount = null;
+    for (const line of lines) {
+      if (totalKeywords.test(line)) {
+        const matches = line.match(numberPattern);
+        if (matches && matches.length) {
+          const val = parseArNumber(matches[matches.length - 1]);
+          if (!isNaN(val) && val > 0) { amount = val; break; }
+        }
+      }
+    }
+    if (amount == null) {
+      const values = (rawText.match(numberPattern) || []).map(parseArNumber).filter((v) => !isNaN(v) && v > 0);
+      if (values.length) amount = Math.max(...values);
+    }
+    let date = null;
+    const dateMatch = rawText.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/);
+    if (dateMatch) {
+      let [, d, m, y] = dateMatch;
+      if (y.length === 2) y = "20" + y;
+      const candidate = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      if (!isNaN(new Date(candidate).getTime())) date = candidate;
+    }
+    let desc = null;
+    for (const line of lines.slice(0, 6)) {
+      if (/[a-zA-ZÀ-ÿ]{3,}/.test(line) && !/^\d+$/.test(line)) { desc = line.slice(0, 60); break; }
+    }
+    const category = guessCategory(rawText);
+    return { amount, date, desc, category };
+  }
+
+  // Comprime una foto de ticket a JPEG chico (para poder guardarla junto al gasto sin pesar de más).
+  function compressImageFile(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo procesar la imagen.")); };
+      img.src = url;
+    });
+  }
+
+  /* ---------- notificaciones locales para actividades con horario ---------- */
+  const notifSupported = typeof Notification !== "undefined";
+  function requestNotifPermission() {
+    if (!notifSupported) return;
+    Notification.requestPermission().then(() => render());
+  }
+  function notifiedKey(taskId, dateISO) { return `nido_notified_${taskId}_${dateISO}`; }
+  function taskAppliesToday(t) {
+    if (t.frequency === "dias") return (t.days || []).includes(todayWeekday());
+    return true;
+  }
+  function taskDoneToday(t) {
+    return t.frequency === "unica" ? !!t.done : t.doneDate === todayISO();
+  }
+  function checkTaskNotifications() {
+    if (!notifSupported || Notification.permission !== "granted") return;
+    if (!state.house || !state.me) return;
+    const today = todayISO();
+    const hm = nowHM();
+    state.tasks.forEach((t) => {
+      if (!t.timeStart) return;
+      if (!taskAppliesToday(t)) return;
+      if (taskDoneToday(t)) return;
+      if (t.timeStart !== hm) return;
+      const key = notifiedKey(t.id, today);
+      if (getLocal(key, false)) return;
+      setLocal(key, true);
+      try {
+        new Notification("Nido — recordatorio", { body: `${t.title}${t.assignee && t.assignee !== "Cualquiera" ? " · " + t.assignee : ""}${t.timeEnd ? ` (hasta ${t.timeEnd})` : ""}`, tag: key });
+      } catch (e) {}
+    });
+  }
+
+  
+  /* ---------- Sistema de Notificaciones / Timbre de la Casa ---------- */
+  let lastSeenAlertTimestamp = Date.now();
+  let toastTimeout = null;
+
+  function handleIncomingAlerts(list) {
+    state.alerts = list || [];
+    if (!state.alerts.length) return;
+    
+    // Buscar la alerta más reciente
+    const sorted = [...state.alerts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const newest = sorted[0];
+    
+    if (newest && newest.timestamp > lastSeenAlertTimestamp) {
+      lastSeenAlertTimestamp = newest.timestamp;
+      // Solo notificar si no fue enviada por mí mismo
+      if (state.me && newest.fromUser !== state.me.name) {
+        playDingDong();
+        state.activeAlertToast = newest;
+        
+        // Notificación del sistema si está habilitada
+        if (notifSupported && Notification.permission === "granted") {
+          try {
+            new Notification(`Nido · ${newest.fromUser}`, {
+              body: newest.message,
+              icon: "./icon-192.png",
+              tag: `alert-${newest.id}`
+            });
+          } catch (e) {}
+        }
+
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          state.activeAlertToast = null;
+          render();
+        }, 8000);
+        render();
+      }
+    }
+  }
+
+  function sendHouseAlert(type, message) {
+    if (!state.house || !state.me) return;
+    const alertObj = {
+      id: uid(),
+      fromUser: state.me.name,
+      fromColor: state.me.color,
+      type: type || "bell",
+      message: message,
+      timestamp: Date.now()
+    };
+    lastSeenAlertTimestamp = alertObj.timestamp;
+    const current = state.alerts || [];
+    // Mantener las últimas 25 alertas
+    const updated = [...current.slice(-24), alertObj];
+    saveList(state.house, "alerts", updated);
+  }
+
+  /* ---------- Firebase helpers ---------- */
+  function dbRef(house, path) {
+    return firebase.database().ref(`nido/${house}/${path}`);
+  }
+  function subscribeList(house, path, cb) {
+    const r = dbRef(house, path);
+    const listener = (snap) => {
+      const val = snap.val();
+      cb(Array.isArray(val) ? val : val ? Object.values(val) : []);
+    };
+    r.on("value", listener);
+    return () => r.off("value", listener);
+  }
+  function saveList(house, path, list) {
+    dbRef(house, path).set(list).catch((e) => console.error("Error guardando", path, e));
+  }
+
+  /* ---------- localStorage (identidad del dispositivo) ---------- */
+  const getLocal = (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+  const setLocal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  /* ---------- estado global + suscripción a la casa actual ---------- */
+  const state = {
+    house: getLocal("nido_house", null),
+    houseAuthed: getLocal("nido_house_authed", null), // guarda el código de la casa ya autenticada en este dispositivo
+    me: getLocal("nido_me", null),
+    members: [], expenses: [], dues: [], tasks: [], events: [], fund: [],
+    datesPlans: [], alerts: [],
+    membersLoaded: false,
+    activeTab: "gastos",
+    citasSubTab: "indeciso", // 'indeciso' | 'sin_ideas'
+    rouletteOptions: ["Cena en casa", "Salir a comer", "Paseo y helado", "Noche de pelis"],
+    rouletteWinner: null,
+    isSpinning: false,
+    editingPlan: null,
+    planFilterTag: "Todos",
+    activeAlertToast: null,
+    bellModalOpen: false,
+    identityAdding: false,
+    identityColor: null,
+    calCursor: (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; })(),
+    calSelected: todayISO(),
+    houseGateBusy: false,
+    houseGateError: null,
+    mobileMenuOpen: false,
+    viewingReceipt: null,
+    theme: getLocal("nido_theme", (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"),
+  };
+  let pendingAutofocus = null;
+
+  /* Reseteo controlado de campos al agregar para evitar que el render() los restaure */
+  const inputsToReset = new Set();
+  function resetFormFields(...ids) {
+    ids.forEach((id) => {
+      inputsToReset.add(id);
+      const el = document.getElementById(id);
+      if (el) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          el.checked = false;
+        } else if (el.tagName === "SELECT") {
+          el.selectedIndex = 0;
+        } else {
+          el.value = "";
+        }
+      }
+    });
+  }
+
+  function applyTheme() {
+    const isDark = state.theme === "dark";
+    if (document.documentElement) document.documentElement.classList.toggle("dark", isDark);
+    if (document.body) document.body.classList.toggle("dark", isDark);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute("content", isDark ? "#151C14" : "#23301F");
+  }
+
+  function setTheme(t) {
+    state.theme = t;
+    setLocal("nido_theme", t);
+    applyTheme();
+    render();
+  }
+
+  function buildThemeToggle() {
+    const isDark = state.theme === "dark";
+    const lightBtn = h("button", {
+      class: "theme-btn" + (!isDark ? " active" : ""),
+      type: "button",
+      title: "Activar modo claro",
+      "aria-label": "Activar modo claro",
+      onClick: (e) => { e.stopPropagation(); setTheme("light"); }
+    }, SunIcon(15));
+
+    const darkBtn = h("button", {
+      class: "theme-btn" + (isDark ? " active" : ""),
+      type: "button",
+      title: "Activar modo oscuro",
+      "aria-label": "Activar modo oscuro",
+      onClick: (e) => { e.stopPropagation(); setTheme("dark"); }
+    }, MoonIcon(15));
+
+    return h("div", { class: "theme-toggle-group", role: "group", "aria-label": "Selector de tema claro u oscuro" },
+      lightBtn,
+      darkBtn
+    );
+  }
+
+  async function downloadProjectZip() {
+    try {
+      const res = await fetch("./download-zip");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "nidopareja-actualizado.zip";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      }, 2500);
+    } catch (err) {
+      console.warn("Descarga por blob falló, usando navegación directa:", err);
+      window.location.href = "./download-zip";
+    }
+  }
+
+  applyTheme();
+
+  let unsubHouse = null;
+  function unsubscribeHouse() { if (unsubHouse) { unsubHouse(); unsubHouse = null; } }
+  function subscribeHouse(house) {
+    unsubscribeHouse();
+    state.members = []; state.expenses = []; state.dues = []; state.tasks = []; state.events = []; state.fund = [];
+    state.membersLoaded = false;
+    const u1 = subscribeList(house, "members", (list) => { state.members = list; state.membersLoaded = true; render(); });
+    const u2 = subscribeList(house, "expenses", (list) => { state.expenses = list; render(); });
+    const u3 = subscribeList(house, "dues", (list) => { state.dues = list; render(); });
+    const u4 = subscribeList(house, "tasks", (list) => { state.tasks = list; render(); checkTaskNotifications(); });
+    const u5 = subscribeList(house, "events", (list) => { state.events = list; render(); });
+    const u6 = subscribeList(house, "fund", (list) => { state.fund = list; render(); });
+    const u7 = subscribeList(house, "dates_plans", (list) => {
+      state.datesPlans = list && list.length > 0 ? list : DEFAULT_CITAS_PLANS;
+      render();
+    });
+    const u8 = subscribeList(house, "alerts", (list) => {
+      handleIncomingAlerts(list);
+    });
+    unsubHouse = () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); u8(); };
+  }
+  if (fbReady && state.house && state.houseAuthed === state.house) subscribeHouse(state.house);
+  if (notifSupported) setInterval(checkTaskNotifications, 20000);
+
+  // Verifica (o crea, si es la primera vez) el código+contraseña de la casa.
+  // Devuelve { ok: true } o { ok: false, error: "..." }
+  async function enterHouse(codeRaw, passwordRaw) {
+    const code = codeRaw.trim().toLowerCase().replace(/\s+/g, "-");
+    const password = passwordRaw;
+    if (!code || !password) return { ok: false, error: "Completá el código y la contraseña." };
+    const metaSnap = await firebase.database().ref(`nido/${code}/meta`).once("value");
+    const meta = metaSnap.val();
+    const hash = await hashPassword(password);
+    if (!meta || !meta.passwordHash) {
+      // Casa nueva: esta contraseña queda como la contraseña de la casa.
+      await firebase.database().ref(`nido/${code}/meta`).set({ passwordHash: hash, createdAt: Date.now() });
+    } else if (meta.passwordHash !== hash) {
+      return { ok: false, error: "Código o contraseña incorrectos." };
+    }
+    state.house = code;
+    state.houseAuthed = code;
+    setLocal("nido_house", code);
+    setLocal("nido_house_authed", code);
+    subscribeHouse(code);
+    return { ok: true };
+  }
+
+  function leaveHouse() {
+    unsubscribeHouse();
+    state.house = null; state.me = null; state.houseAuthed = null;
+    setLocal("nido_house", null); setLocal("nido_me", null); setLocal("nido_house_authed", null);
+    render();
+  }
+  function switchUser() { state.me = null; setLocal("nido_me", null); render(); }
+  function toggleMobileMenu(force) {
+    state.mobileMenuOpen = typeof force === "boolean" ? force : !state.mobileMenuOpen;
+    render();
+  }
+  function chooseMember(member) {
+    if (!state.members.some((m) => m.name === member.name)) {
+      saveList(state.house, "members", [...state.members, member]);
+    }
+    state.me = member; setLocal("nido_me", member);
+    state.identityAdding = false; state.identityColor = null;
+    render();
+  }
+  function colorFor(name) {
+    const m = state.members.find((mm) => mm.name === name);
+    return m ? m.color : "#999";
+  }
+  function headerCopy(tab) {
+    switch (tab) {
+      case "gastos": return "Registren lo que va gastando cada uno para tener todo a la vista.";
+      case "fondo": return "El pozo común de la casa, actualizado al instante para los dos.";
+      case "vencimientos": return "Alquiler, expensas y servicios: que no se les pase ninguna fecha.";
+      case "tareas": return "Lo que hay que hacer en casa, repartido entre los dos.";
+      case "citas": return "Planes de a dos, ideas para salir o quedarse y una ruleta para cuando no se deciden.";
+      case "calendario": return "Fechas importantes para los dos.";
+      default: return "";
+    }
+  }
+  function fundBalance() {
+    return state.fund.reduce((s, m) => s + (m.type === "ingreso" ? m.amount : -m.amount), 0);
+  }
+  function dueStatus(due) {
+    if (due.paid) return { label: "Pagado", cls: "good" };
+    const days = Math.floor((new Date(due.dueDate) - new Date(todayISO())) / 86400000);
+    if (days < 0) return { label: "Vencido", cls: "bad" };
+    if (days <= 5) return { label: days === 0 ? "Vence hoy" : `Vence en ${days}d`, cls: "warn" };
+    return { label: "Al día", cls: "good" };
+  }
+
+  /* ---------- pantalla: falta configurar Firebase ---------- */
+  function buildConfigMissing() {
+    return h("div", { class: "nido", style: { alignItems: "center", justifyContent: "center" } },
+      h("div", { class: "identity-card", style: { textAlign: "center" } },
+        h("h1", {}, "Falta configurar Firebase"),
+        h("p", {}, "Abrí el archivo ", h("code", {}, "firebase-config.js"), " y pegá ahí la configuración de tu proyecto de Firebase. Sin eso, la app no puede guardar ni sincronizar nada.")
+      )
+    );
+  }
+
+  /* ---------- pantalla: código de casa + contraseña ---------- */
+  function buildHouseScreen() {
+    const codeInput = h("input", { id: "input-house-code", placeholder: "Ej: casa-verde-2026", value: getLocal("nido_last_house_code", "") });
+    const passInput = h("input", { id: "input-house-pass", type: "password", placeholder: "Contraseña de la casa", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: state.houseGateBusy }, state.houseGateBusy ? "Verificando…" : "Entrar");
+    const updateBtn = () => { submitBtn.disabled = state.houseGateBusy || !codeInput.value.trim() || !passInput.value; };
+    const submit = async () => {
+      if (!codeInput.value.trim() || !passInput.value || state.houseGateBusy) return;
+      state.houseGateBusy = true; state.houseGateError = null; render();
+      setLocal("nido_last_house_code", codeInput.value.trim());
+      const result = await enterHouse(codeInput.value, passInput.value);
+      state.houseGateBusy = false;
+      if (!result.ok) state.houseGateError = result.error;
+      render();
+    };
+    codeInput.addEventListener("input", updateBtn);
+    passInput.addEventListener("input", updateBtn);
+    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    passInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+    pendingAutofocus = codeInput.value ? passInput : codeInput;
+
+    return h("div", { class: "nido" + (state.theme === "dark" ? " dark" : "") },
+      h("div", { class: "identity-wrap" },
+        h("div", { class: "identity-card" },
+          h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" } },
+            h("span", { style: { fontFamily: "Fraunces, serif", fontStyle: "italic", fontSize: "1.3rem", fontWeight: "600", color: "var(--ink)" } }, "Nido"),
+            buildThemeToggle()
+          ),
+          h("h1", {}, "Bienvenido a Nido"),
+          h("p", {}, "El espacio de los dos para organizar la convivencia: gastos, vencimientos, tareas y fechas importantes."),
+          h("div", { class: "form-block", style: { borderTop: "none", paddingTop: "0" } },
+            h("label", {}, "Código de tu casa"),
+            codeInput,
+            h("label", {}, "Contraseña de la casa"),
+            passInput,
+            h("div", { class: "helper-text" }, "La primera vez que entren, el código y la contraseña que elijan quedan guardados como los de su casa: solo quien los conozca va a poder entrar. Usen los mismos datos en ambos celulares."),
+            state.houseGateError ? h("div", { class: "helper-text", style: { color: "var(--bad)", marginTop: "-0.5rem" } }, state.houseGateError) : null,
+            submitBtn
+          )
+        )
+      )
+    );
+  }
+
+  /* ---------- pantalla: elegir quién sos ---------- */
+  function buildIdentityGate() {
+    if (!state.membersLoaded) {
+      return h("div", { class: "nido" + (state.theme === "dark" ? " dark" : ""), style: { alignItems: "center", justifyContent: "center" } },
+        h("p", { style: { color: "#5C6B54" } }, "Conectando con tu casa…")
+      );
+    }
+
+    const usedColors = state.members.map((m) => m.color);
+    const defaultColor = PALETTE.find((c) => !usedColors.includes(c)) || PALETTE[0];
+    const currentColor = state.identityColor || defaultColor;
+
+    const nameInput = h("input", { id: "input-identity-name", placeholder: "Ej: Juli", value: "" });
+    const submitBtn = h("button", { class: "primary-btn", disabled: true }, "Entrar");
+    const submit = () => { const clean = nameInput.value.trim(); if (!clean) return; chooseMember({ name: clean, color: currentColor }); };
+    nameInput.addEventListener("input", () => { submitBtn.disabled = !nameInput.value.trim(); });
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+    submitBtn.addEventListener("click", submit);
+
+    const showForm = state.identityAdding || state.members.length === 0;
+    if (showForm) pendingAutofocus = nameInput;
+
+    const headerRow = h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" } },
+      h("span", { style: { fontFamily: "Fraunces, serif", fontStyle: "italic", fontSize: "1.3rem", fontWeight: "600", color: "var(--ink)" } }, "Nido"),
+      buildThemeToggle()
+    );
+    const children = [headerRow, h("h1", {}, "¿Quién sos?"), h("p", {}, "Casa: ", h("strong", {}, state.house))];
+
+    if (state.members.length > 0 && !state.identityAdding) {
+      state.members.forEach((m) => {
+        children.push(h("button", { class: "member-chip", onClick: () => chooseMember(m) },
+          h("span", { class: "swatch", style: { background: m.color } }), " " + m.name
+        ));
+      });
+      children.push(h("button", { class: "member-chip", style: { color: "var(--ink-muted)", justifyContent: "center" }, onClick: () => { state.identityAdding = true; state.identityColor = null; render(); } }, "+ Soy otra persona"));
+    }
+
+    if (showForm) {
+      children.push(
+        h("div", { class: "form-block", style: { borderTop: state.members.length > 0 ? "1px solid var(--line)" : "none", paddingTop: state.members.length > 0 ? "1.25rem" : "0" } },
+          h("label", {}, "Tu nombre"),
+          nameInput,
+          h("label", {}, "Elegí tu color"),
+          h("div", { class: "color-picker" },
+            ...PALETTE.map((c) => h("button", { class: "color-dot" + (currentColor === c ? " selected" : ""), style: { background: c }, onClick: () => { state.identityColor = c; render(); } }))
+          ),
+          h("div", { style: { display: "flex", gap: "0.6rem" } },
+            submitBtn,
+            state.members.length > 0 ? h("button", { class: "ghost-btn", onClick: () => { state.identityAdding = false; render(); } }, "Volver") : null
+          )
+        )
+      );
+    }
+
+    children.push(h("button", { class: "ghost-btn", style: { marginTop: "1rem", padding: "0" }, onClick: () => leaveHouse() }, "← Cambiar de casa"));
+
+    return h("div", { class: "nido" + (state.theme === "dark" ? " dark" : "") }, h("div", { class: "identity-wrap" }, h("div", { class: "identity-card" }, ...children)));
+  }
+
+  /* ---------- app principal ---------- */
+  function buildHomeApp() {
+    const closeMenu = () => toggleMobileMenu(false);
+    const nav = h("nav", { class: "nav" },
+      ...TABS.map((t) => h("button", { class: "nav-item" + (state.activeTab === t.id ? " active" : ""), onClick: () => { state.activeTab = t.id; state.mobileMenuOpen = false; render(); } },
+        t.icon(17), h("span", {}, t.label)
+      ))
+    );
+
+    const sidebar = h("aside", { class: "sidebar" + (state.mobileMenuOpen ? " open" : "") },
+      h("div", { class: "brand-row" },
+        h("div", {},
+          h("div", { class: "brand" }, h("h1", {}, "Nido")),
+          h("div", { class: "brand-sub" }, state.members.length > 1 ? `La casa de ${state.members.map((m) => m.name).join(" y ")}` : `Casa: ${state.house}`)
+        ),
+        h("button", { class: "drawer-close", onClick: closeMenu, "aria-label": "Cerrar menú" }, XIcon(20))
+      ),
+      nav,
+      h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line)", paddingTop: "0.75rem", paddingBottom: "0.25rem" } },
+        h("span", { style: { fontSize: "0.82rem", color: "var(--ink-muted)", fontWeight: "500" } }, "Tema"),
+        buildThemeToggle()
+      ),
+      h("div", { style: { borderTop: "1px solid var(--line)", paddingTop: "0.6rem", paddingBottom: "0.2rem" } },
+        h("button", {
+          class: "ghost-btn",
+          style: { width: "100%", justifyContent: "flex-start", gap: "0.5rem", fontSize: "0.82rem", padding: "0.45rem 0.5rem", color: "var(--ink)", fontWeight: "600" },
+          onClick: downloadProjectZip,
+          title: "Descargar paquete ZIP con todos los archivos para tu hosting o servidor"
+        }, DownloadIcon(15), "Descargar ZIP (.zip)")
+      ),
+      h("div", { class: "me-row" },
+        h("span", { class: "swatch", style: { background: state.me.color } }),
+        h("div", {},
+          "Sos ", h("strong", { style: { color: "var(--ink)" } }, state.me.name),
+          h("button", { class: "switch-user", onClick: () => { closeMenu(); switchUser(); } }, LogoutIcon(12), " Cambiar de usuario")
+        )
+      )
+    );
+
+    const backdrop = h("div", { class: "drawer-backdrop" + (state.mobileMenuOpen ? " open" : ""), onClick: closeMenu });
+
+    const bellBtnMobile = h("button", {
+      class: "bell-btn",
+      style: { padding: "0.25rem 0.6rem" },
+      onClick: () => { state.bellModalOpen = true; render(); },
+      title: "Tocar el timbre o mandar un aviso a la casa"
+    }, BellIcon(14), h("span", { style: { fontSize: "0.75rem", fontWeight: "600" } }, "Avisar"));
+
+    const mobileTopbar = h("div", { class: "mobile-topbar" },
+      h("button", { class: "brand-trigger", onClick: () => toggleMobileMenu(true), "aria-label": "Abrir menú" },
+        MenuIcon(18), h("h1", {}, "Nido")
+      ),
+      h("div", { style: { display: "flex", alignItems: "center", gap: "0.4rem" } },
+        h("button", {
+          class: "ghost-btn",
+          style: { padding: "0.3rem 0.5rem", fontSize: "0.74rem", display: "flex", alignItems: "center", gap: "0.25rem", fontWeight: "600" },
+          onClick: downloadProjectZip,
+          title: "Descargar paquete ZIP"
+        }, DownloadIcon(13), "ZIP"),
+        buildThemeToggle(),
+        bellBtnMobile
+      )
+    );
+
+    let tabContent;
+    if (state.activeTab === "gastos") tabContent = buildGastosTab();
+    else if (state.activeTab === "fondo") tabContent = buildFondoTab();
+    else if (state.activeTab === "vencimientos") tabContent = buildVencimientosTab();
+    else if (state.activeTab === "tareas") tabContent = buildTareasTab();
+    else if (state.activeTab === "citas") tabContent = buildCitasTab();
+    else tabContent = buildCalendarioTab();
+
+    const main = h("main", { class: "main" },
+      h("div", { class: "main-header" },
+        h("div", {}, h("h2", {}, TABS.find((t) => t.id === state.activeTab).label), h("p", {}, headerCopy(state.activeTab))),
+        h("div", { style: { display: "flex", alignItems: "center", gap: "0.6rem" } },
+          h("button", {
+            class: "ghost-btn",
+            style: { padding: "0.38rem 0.7rem", fontSize: "0.82rem", display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: "600" },
+            onClick: downloadProjectZip,
+            title: "Descargar ZIP con los archivos actualizados del proyecto"
+          }, DownloadIcon(15), "Descargar ZIP"),
+          buildThemeToggle(),
+          h("button", {
+            class: "bell-btn",
+            onClick: () => { state.bellModalOpen = true; render(); },
+            title: "Tocar el timbre o mandar un aviso a la casa"
+          }, BellIcon(15), h("span", {}, "Avisar a la casa")),
+          h("div", { class: "sync-badge" }, h("span", { class: "sync-dot" }), " Sincronizado")
+        )
+      ),
+      tabContent
+    );
+
+    const receiptModal = !state.viewingReceipt ? null : h("div", { class: "receipt-modal-backdrop", onClick: () => { state.viewingReceipt = null; render(); } },
+      h("div", { class: "receipt-modal", onClick: (e) => e.stopPropagation() },
+        h("button", { class: "drawer-close", style: { display: "flex", marginLeft: "auto" }, onClick: () => { state.viewingReceipt = null; render(); } }, XIcon(20)),
+        h("img", { src: state.viewingReceipt, alt: "Ticket", style: { maxWidth: "100%", maxHeight: "78vh", borderRadius: "10px", display: "block" } })
+      )
+    );
+
+    // Toast flotante cuando entra una notificación de la otra persona
+    const alertToast = !state.activeAlertToast ? null : h("div", { class: "alert-toast" },
+      h("div", { style: { width: "10px", height: "10px", borderRadius: "50%", background: state.activeAlertToast.fromColor || "var(--warn)", flex: "none" } }),
+      h("div", { style: { flex: "1", minWidth: "0" } },
+        h("div", { style: { fontSize: "0.82rem", fontWeight: "700", color: "var(--ink)" } }, `Aviso de ${state.activeAlertToast.fromUser}`),
+        h("div", { style: { fontSize: "0.85rem", color: "var(--ink-muted)", marginTop: "0.1rem" } }, state.activeAlertToast.message)
+      ),
+      h("button", { class: "icon-btn", onClick: () => { state.activeAlertToast = null; render(); } }, XIcon(14))
+    );
+
+    // Modal para tocar el timbre o mandar aviso rápido
+    const bellModal = !state.bellModalOpen ? null : buildBellModal();
+
+    return h("div", { class: "nido" + (state.theme === "dark" ? " dark" : "") }, backdrop, mobileTopbar, sidebar, main, receiptModal, alertToast, bellModal);
+  }
+
+  /* ---------- tab: gastos ---------- */
+  function buildGastosTab() {
+    const descInput = h("input", { id: "input-gastos-desc", placeholder: "Ej: Supermercado", value: "" });
+    const amountInput = h("input", { id: "input-gastos-amount", type: "number", placeholder: "0", value: "" });
+    const categorySelect = h("select", { id: "input-gastos-category" }, ...CAT_GASTOS.map((c) => h("option", {}, c)));
+    const dateInput = h("input", { id: "input-gastos-date", type: "date", value: todayISO() });
+    const fundCheckbox = h("input", { id: "input-gastos-fund", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+
+    const ocrInput = h("input", { type: "file", accept: "image/*", capture: "environment", style: { display: "none" } });
+    const ocrBtn = h("button", { type: "button", class: "add-btn", style: { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--line)" } }, CameraIcon(15), " Escanear factura");
+    const ocrStatus = h("div", { class: "helper-text", style: { display: "none", marginTop: "0.5rem", marginBottom: "0" } });
+    const photoThumb = h("img", { style: { width: "42px", height: "42px", objectFit: "cover", borderRadius: "6px", border: "1px solid var(--line)" } });
+    const removePhotoBtn = h("button", { class: "icon-btn", type: "button" }, XIcon(13));
+    const photoPreview = h("div", { style: { display: "none", alignItems: "center", gap: "0.5rem", marginTop: "0.6rem" } },
+      photoThumb, h("span", { style: { fontSize: "0.78rem", color: "var(--ink-muted)" } }, "Foto del ticket adjunta"), removePhotoBtn
+    );
+    let pendingReceiptPhoto = null;
+    removePhotoBtn.addEventListener("click", () => { pendingReceiptPhoto = null; photoPreview.style.display = "none"; });
+
+    ocrBtn.addEventListener("click", () => ocrInput.click());
+    ocrInput.addEventListener("change", async () => {
+      const file = ocrInput.files[0];
+      if (!file) return;
+      ocrBtn.disabled = true;
+      ocrStatus.style.display = "block";
+      ocrStatus.style.color = "";
+      ocrStatus.textContent = "Guardando la foto…";
+      try {
+        pendingReceiptPhoto = await compressImageFile(file, 1000, 0.6);
+        photoThumb.src = pendingReceiptPhoto;
+        photoPreview.style.display = "flex";
+      } catch (e) { /* si falla la compresión seguimos igual con la lectura de texto */ }
+      ocrStatus.textContent = "Descargando el lector (solo la primera vez)…";
+      try {
+        const text = await runOcr(file, (pct) => { ocrStatus.textContent = `Leyendo la factura… ${pct}%`; });
+        const data = extractInvoiceData(text);
+        if (data.desc) { descInput.value = data.desc; descInput.dispatchEvent(new Event("input", { bubbles: true })); }
+        if (data.amount != null) { amountInput.value = data.amount; amountInput.dispatchEvent(new Event("input", { bubbles: true })); }
+        if (data.date) { dateInput.value = data.date; dateInput.dispatchEvent(new Event("input", { bubbles: true })); }
+        if (data.category) categorySelect.value = data.category;
+        updateAddBtn();
+        ocrStatus.textContent = (data.amount != null || data.date || data.desc)
+          ? "Listo. Revisá los datos antes de guardar — la lectura automática puede equivocarse."
+          : "No pude reconocer datos en la foto, pero quedó guardada para revisarla después. Cargá los datos a mano.";
+      } catch (e) {
+        ocrStatus.style.color = "var(--bad)";
+        ocrStatus.textContent = (pendingReceiptPhoto ? "No pude leer el texto, pero la foto quedó guardada. " : "") + (e.message || "No se pudo leer la factura. Cargá los datos a mano.");
+      } finally {
+        ocrBtn.disabled = false;
+        ocrInput.value = "";
+      }
+    });
+
+    const submitGasto = () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const descVal = descInput.value.trim();
+      const amountVal = Number(amountInput.value);
+      const catVal = categorySelect.value;
+      const dateVal = dateInput.value;
+      const fromFund = fundCheckbox.checked;
+      const fundTxId = fromFund ? uid() : null;
+      const receiptPhotoVal = pendingReceiptPhoto;
+
+      resetFormFields("input-gastos-desc", "input-gastos-amount", "input-gastos-fund");
+      descInput.value = "";
+      amountInput.value = "";
+      categorySelect.selectedIndex = 0;
+      dateInput.value = todayISO();
+      fundCheckbox.checked = false;
+      pendingReceiptPhoto = null;
+      photoPreview.style.display = "none";
+      ocrStatus.style.display = "none";
+      updateAddBtn();
+
+      const entry = { id: uid(), desc: descVal, amount: amountVal, category: catVal, date: dateVal, paidBy: fromFund ? FUND_PAYER : state.me.name, loggedBy: state.me.name, fromFund, fundTxId, receiptPhoto: receiptPhotoVal };
+      saveList(state.house, "expenses", [entry, ...state.expenses]);
+      if (fromFund) {
+        saveList(state.house, "fund", [{ id: fundTxId, type: "gasto", amount: amountVal, desc: entry.desc, createdBy: state.me.name, date: dateVal }, ...state.fund]);
+      }
+    };
+
+    addBtn.addEventListener("click", submitGasto);
+    descInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.focus(); });
+    amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) submitGasto(); });
+
+    const totals = {};
+    state.members.forEach((m) => (totals[m.name] = 0));
+    state.expenses.forEach((e) => { if (!e.fromFund) totals[e.paidBy] = (totals[e.paidBy] || 0) + e.amount; });
+    const maxTotal = Math.max(1, ...Object.values(totals));
+    const totalGeneral = state.expenses.reduce((s, e) => s + e.amount, 0);
+    const balance = fundBalance();
+
+    const summary = h("div", { class: "summary" },
+      h("div", { class: "summary-card" }, h("div", { class: "label" }, "Total registrado"), h("div", { class: "value" }, money(totalGeneral))),
+      h("div", { class: "summary-card" },
+        h("div", { class: "label" }, CoinsIcon(13), " Fondo común"),
+        h("div", { class: "value" }, money(balance)),
+        h("div", { style: { fontSize: "0.72rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Se actualiza en tiempo real")
+      ),
+      ...Object.entries(totals).map(([name, val]) => h("div", { class: "summary-card" },
+        h("div", { class: "label" }, h("span", { class: "swatch", style: { background: colorFor(name) } }), name),
+        h("div", { class: "value" }, money(val)),
+        h("div", { class: "bar-track" }, h("div", { class: "bar-fill", style: { width: `${(val / maxTotal) * 100}%`, background: colorFor(name) } }))
+      ))
+    );
+
+    const scanBlock = h("div", { style: { marginBottom: "1rem" } },
+      ocrBtn, ocrInput, ocrStatus, photoPreview
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field" }, h("label", {}, "Fecha"), dateInput),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, fundCheckbox, h("label", { style: { marginBottom: "0" } }, "Pagar con fondo común")),
+      addBtn
+    );
+
+    const list = state.expenses.length === 0
+      ? h("div", { class: "empty-state" }, "Todavía no cargaron ningún gasto.", h("br"), "Sumá el primero para empezar a llevar la cuenta.")
+      : h("div", {}, ...state.expenses.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.paidBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, e.desc),
+            h("div", { class: "row-meta" },
+              h("span", {}, e.category), h("span", {}, "·"), h("span", {}, fmtDate(e.date)), h("span", {}, "·"),
+              h("span", {}, e.fromFund ? `Fondo común (cargado por ${e.loggedBy || e.paidBy})` : e.paidBy),
+              e.fromFund ? h("span", { class: "pill good" }, "Fondo común") : null
+            )
+          ),
+          h("div", { class: "row-amount" }, money(e.amount)),
+          e.receiptPhoto ? h("button", { class: "icon-btn", title: "Ver ticket", onClick: () => { state.viewingReceipt = e.receiptPhoto; render(); } }, CameraIcon(15)) : null,
+          h("button", { class: "icon-btn", onClick: () => {
+            saveList(state.house, "expenses", state.expenses.filter((x) => x.id !== e.id));
+            if (e.fromFund && e.fundTxId) saveList(state.house, "fund", state.fund.filter((f) => f.id !== e.fundTxId));
+          } }, TrashIcon(15))
+        )));
+
+    return h("div", {}, summary, scanBlock, form, list);
+  }
+
+  /* ---------- tab: fondo común ---------- */
+  function buildFondoTab() {
+    const balance = fundBalance();
+    const descInput = h("input", { id: "input-fund-desc", placeholder: "Ej: Aporte mensual", value: "" });
+    const amountInput = h("input", { id: "input-fund-amount", type: "number", placeholder: "0", value: "" });
+    const typeSelect = h("select", { id: "input-fund-type" }, h("option", { value: "ingreso" }, "Ingreso (suma)"), h("option", { value: "gasto" }, "Gasto (resta)"));
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Registrar");
+
+    const updateAddBtn = () => { addBtn.disabled = !(descInput.value.trim() && amountInput.value); };
+    descInput.addEventListener("input", updateAddBtn);
+    amountInput.addEventListener("input", updateAddBtn);
+    const submitFondo = () => {
+      if (!descInput.value.trim() || !amountInput.value) return;
+      const descVal = descInput.value.trim();
+      const amountVal = Number(amountInput.value);
+      const typeVal = typeSelect.value;
+
+      resetFormFields("input-fund-desc", "input-fund-amount");
+      descInput.value = "";
+      amountInput.value = "";
+      typeSelect.selectedIndex = 0;
+      updateAddBtn();
+
+      const entry = { id: uid(), type: typeVal, amount: amountVal, desc: descVal, createdBy: state.me.name, date: todayISO() };
+      saveList(state.house, "fund", [entry, ...state.fund]);
+    };
+
+    addBtn.addEventListener("click", submitFondo);
+    descInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.focus(); });
+    amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) submitFondo(); });
+
+    const balanceCard = h("div", { class: "summary-card", style: { maxWidth: "320px", marginBottom: "1.5rem" } },
+      h("div", { class: "label" }, CoinsIcon(13), " Saldo actual del fondo"),
+      h("div", { class: "value", style: { fontSize: "1.9rem" } }, money(balance)),
+      h("div", { style: { fontSize: "0.78rem", color: "var(--ink-muted)", marginTop: "0.3rem" } }, "Cualquiera de los dos puede sumar o usar este dinero, y el saldo se sincroniza al instante en ambos celulares.")
+    );
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Descripción"), descInput),
+      h("div", { class: "field" }, h("label", {}, "Monto"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Tipo"), typeSelect),
+      addBtn
+    );
+
+    const list = state.fund.length === 0
+      ? h("div", { class: "empty-state" }, "El fondo común todavía no tiene movimientos.", h("br"), "Registrá el primer aporte para arrancar.")
+      : h("div", {}, ...state.fund.map((f) => h("div", { class: "list-row", style: { "--row-color": colorFor(f.createdBy) } },
+          h("div", { class: "row-main" },
+            h("div", { class: "row-title" }, f.desc),
+            h("div", { class: "row-meta" }, h("span", {}, fmtDate(f.date)), h("span", {}, "·"), h("span", {}, f.createdBy))
+          ),
+          h("span", { class: "pill " + (f.type === "ingreso" ? "good" : "bad") }, f.type === "ingreso" ? "Ingreso" : "Gasto"),
+          h("div", { class: "row-amount", style: { color: f.type === "ingreso" ? "var(--good)" : "var(--bad)" } }, (f.type === "ingreso" ? "+ " : "− ") + money(f.amount)),
+          h("button", { class: "icon-btn", onClick: () => saveList(state.house, "fund", state.fund.filter((x) => x.id !== f.id)) }, TrashIcon(15))
+        )));
+
+    return h("div", {}, balanceCard, form, list);
+  }
+
+  /* ---------- tab: vencimientos ---------- */
+  function buildVencimientosTab() {
+    const titleInput = h("input", { id: "input-venc-title", placeholder: "Ej: Alquiler", value: "" });
+    const amountInput = h("input", { id: "input-venc-amount", type: "number", placeholder: "0", value: "" });
+    const dateInput = h("input", { id: "input-venc-date", type: "date", value: todayISO() });
+    const categorySelect = h("select", { id: "input-venc-category" }, ...CAT_VENC.map((c) => h("option", {}, c)));
+    const recurringCheckbox = h("input", { id: "input-venc-recurring", type: "checkbox", style: { width: "auto" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const submitVenc = () => {
+      if (!titleInput.value.trim() || !dateInput.value) return;
+      const titleVal = titleInput.value.trim();
+      const amountVal = amountInput.value ? Number(amountInput.value) : null;
+      const dateVal = dateInput.value;
+      const catVal = categorySelect.value;
+      const recurringVal = recurringCheckbox.checked;
+
+      resetFormFields("input-venc-title", "input-venc-amount", "input-venc-recurring");
+      titleInput.value = "";
+      amountInput.value = "";
+      dateInput.value = todayISO();
+      categorySelect.selectedIndex = 0;
+      recurringCheckbox.checked = false;
+      addBtn.disabled = true;
+
+      const entry = { id: uid(), title: titleVal, amount: amountVal, dueDate: dateVal, category: catVal, recurring: recurringVal, paid: false, createdBy: state.me.name };
+      saveList(state.house, "dues", [...state.dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    };
+
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.focus(); });
+    amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) submitVenc(); });
+    addBtn.addEventListener("click", submitVenc);
+
+    const togglePaid = (id) => {
+      const target = state.dues.find((d) => d.id === id);
+      let list = state.dues.map((d) => (d.id === id ? { ...d, paid: !d.paid } : d));
+      if (target && !target.paid && target.recurring) {
+        const next = new Date(target.dueDate);
+        next.setMonth(next.getMonth() + 1);
+        list = [...list, { ...target, id: uid(), paid: false, dueDate: next.toISOString().slice(0, 10) }];
+      }
+      saveList(state.house, "dues", list.sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+    };
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Título"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Monto (opcional)"), amountInput),
+      h("div", { class: "field" }, h("label", {}, "Vence"), dateInput),
+      h("div", { class: "field" }, h("label", {}, "Categoría"), categorySelect),
+      h("div", { class: "field", style: { flexDirection: "row", alignItems: "center", gap: "0.4rem", paddingBottom: "0.4rem" } }, recurringCheckbox, h("label", { style: { marginBottom: "0" } }, "Mensual")),
+      addBtn
+    );
+
+    const sorted = [...state.dues].sort((a, b) => { if (a.paid !== b.paid) return a.paid ? 1 : -1; return a.dueDate.localeCompare(b.dueDate); });
+
+    const list = sorted.length === 0
+      ? h("div", { class: "empty-state" }, "No hay vencimientos cargados.", h("br"), "Agregá el alquiler, las expensas o los servicios para no olvidarse de pagarlos.")
+      : h("div", {}, ...sorted.map((d) => {
+          const status = dueStatus(d);
+          return h("div", { class: "list-row", style: { "--row-color": colorFor(d.createdBy) } },
+            h("button", { class: "check-btn" + (d.paid ? " checked" : ""), onClick: () => togglePaid(d.id) }, d.paid ? CheckIcon(13) : null),
+            h("div", { class: "row-main" },
+              h("div", { class: "row-title" + (d.paid ? " strike" : "") }, d.title),
+              h("div", { class: "row-meta" }, h("span", {}, d.category), h("span", {}, "·"), h("span", {}, "Vence " + fmtDate(d.dueDate)), d.recurring ? h("span", {}, "· Mensual") : null)
+            ),
+            h("span", { class: "pill " + status.cls }, status.label),
+            d.amount != null ? h("div", { class: "row-amount" }, money(d.amount)) : null,
+            h("button", { class: "icon-btn", onClick: () => saveList(state.house, "dues", state.dues.filter((x) => x.id !== d.id)) }, TrashIcon(15))
+          );
+        }));
+
+    return h("div", {}, form, list);
+  }
+
+  /* ---------- tab: tareas ---------- */
+  function scheduleLabel(t) {
+    if (t.frequency === "diaria") return "Diaria";
+    if (t.frequency === "dias") {
+      const days = (t.days || []).slice().sort((a, b) => a - b).map((d) => WEEKDAY_ABBR[d]);
+      return days.length ? days.join(", ") : "Días específicos";
+    }
+    return null;
+  }
+  function timeLabel(t) {
+    if (!t.timeStart) return null;
+    return t.timeEnd ? `${t.timeStart}–${t.timeEnd}` : t.timeStart;
+  }
+
+  function buildTareasTab() {
+    const titleInput = h("input", { id: "input-tarea-title", placeholder: "Ej: Sacar la basura", value: "" });
+    const assigneeSelect = h("select", { id: "input-tarea-assignee" }, h("option", {}, "Cualquiera"), ...state.members.map((m) => h("option", {}, m.name)));
+    const frequencySelect = h("select", { id: "input-tarea-frequency" },
+      h("option", { value: "unica" }, "Única vez"),
+      h("option", { value: "diaria" }, "Diaria"),
+      h("option", { value: "dias" }, "Días específicos")
+    );
+    const timeStartInput = h("input", { id: "input-tarea-time-start", type: "time", value: "" });
+    const timeEndInput = h("input", { id: "input-tarea-time-end", type: "time", value: "" });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15), " Agregar");
+
+    const dayCheckboxes = WEEKDAY_ABBR.map((abbr, i) => {
+      const cb = h("input", { type: "checkbox", id: `input-tarea-day-${i}` });
+      const lbl = h("label", { class: "day-pill" }, cb, abbr);
+      cb.addEventListener("input", () => { lbl.classList.toggle("checked", cb.checked); updateAddBtn(); });
+      return lbl;
+    });
+    const daysWrap = h("div", { class: "field", id: "tarea-days-wrap", style: { display: "none" } },
+      h("label", {}, "Días"),
+      h("div", { style: { display: "flex", gap: "0.3rem" } }, ...dayCheckboxes)
+    );
+
+    const updateAddBtn = () => {
+      const hasTitle = titleInput.value.trim().length > 0;
+      const needsDays = frequencySelect.value === "dias";
+      const hasDay = !needsDays || dayCheckboxes.some((lbl) => lbl.querySelector("input").checked);
+      addBtn.disabled = !(hasTitle && hasDay);
+    };
+    titleInput.addEventListener("input", updateAddBtn);
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) add(); });
+    frequencySelect.addEventListener("input", () => {
+      daysWrap.style.display = frequencySelect.value === "dias" ? "block" : "none";
+      updateAddBtn();
+    });
+
+    const add = () => {
+      const needsDays = frequencySelect.value === "dias";
+      const days = dayCheckboxes.reduce((acc, lbl, i) => (lbl.querySelector("input").checked ? [...acc, i] : acc), []);
+      if (!titleInput.value.trim()) return;
+      if (needsDays && days.length === 0) return;
+      const entry = {
+        id: uid(), title: titleInput.value.trim(), assignee: assigneeSelect.value,
+        frequency: frequencySelect.value, days: needsDays ? days : [],
+        timeStart: timeStartInput.value || null, timeEnd: timeEndInput.value || null,
+        done: false, doneDate: null, createdBy: state.me.name,
+      };
+
+      const dayIds = WEEKDAY_ABBR.map((_, i) => `input-tarea-day-${i}`);
+      resetFormFields("input-tarea-title", "input-tarea-time-start", "input-tarea-time-end", ...dayIds);
+      titleInput.value = "";
+      assigneeSelect.selectedIndex = 0;
+      frequencySelect.selectedIndex = 0;
+      timeStartInput.value = "";
+      timeEndInput.value = "";
+      daysWrap.style.display = "none";
+      dayCheckboxes.forEach((lbl) => { const cb = lbl.querySelector("input"); cb.checked = false; lbl.classList.remove("checked"); });
+      updateAddBtn();
+
+      saveList(state.house, "tasks", [entry, ...state.tasks]);
+      if (entry.timeStart && notifSupported && Notification.permission === "default") requestNotifPermission();
+    };
+    addBtn.addEventListener("click", add);
+    updateAddBtn();
+
+    const toggle = (t) => {
+      if (t.frequency === "unica") {
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)));
+      } else {
+        const nowDone = taskDoneToday(t);
+        saveList(state.house, "tasks", state.tasks.map((x) => (x.id === t.id ? { ...x, doneDate: nowDone ? null : todayISO() } : x)));
+      }
+    };
+    const remove = (id) => saveList(state.house, "tasks", state.tasks.filter((t) => t.id !== id));
+
+    const todays = state.tasks.filter((t) => taskAppliesToday(t));
+    const pending = todays.filter((t) => !taskDoneToday(t));
+    const done = todays.filter((t) => taskDoneToday(t));
+    const notToday = state.tasks.filter((t) => t.frequency === "dias" && !taskAppliesToday(t));
+
+    const form = h("div", { class: "entry-form" },
+      h("div", { class: "field grow" }, h("label", {}, "Tarea"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Para"), assigneeSelect),
+      h("div", { class: "field" }, h("label", {}, "Repetición"), frequencySelect),
+      daysWrap,
+      h("div", { class: "field" }, h("label", {}, "Desde (opcional)"), timeStartInput),
+      h("div", { class: "field" }, h("label", {}, "Hasta (opcional)"), timeEndInput),
+      addBtn
+    );
+
+    const notifBanner = (!notifSupported || Notification.permission === "granted") ? null :
+      h("div", { class: "empty-state", style: { textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.85rem 1rem", marginBottom: "1rem" } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem" } }, BellIcon(16), h("span", {}, Notification.permission === "denied" ? "Bloqueaste las notificaciones del navegador para este sitio; activalas desde el ícono del candado si querés recordatorios." : "Activá las notificaciones para recibir un aviso al empezar cada actividad.")),
+        Notification.permission === "denied" ? null : h("button", { class: "add-btn", onClick: () => requestNotifPermission() }, "Activar")
+      );
+
+    const rowMeta = (t) => [
+      h("span", {}, t.assignee),
+      scheduleLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", RepeatIcon(11), scheduleLabel(t)) : null,
+      timeLabel(t) ? h("span", { style: { display: "inline-flex", alignItems: "center", gap: "0.2rem" } }, "·", BellIcon(11), timeLabel(t)) : null,
+    ];
+
+    const taskRow = (t, checked) => h("div", { class: "list-row" + (checked ? " done" : ""), style: { "--row-color": colorFor(t.createdBy) } },
+      h("button", { class: "check-btn" + (checked ? " checked" : ""), onClick: () => toggle(t) }, checked ? CheckIcon(13) : null),
+      h("div", { class: "row-main" }, h("div", { class: "row-title" + (checked ? " strike" : "") }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+      h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+    );
+
+    let listBody;
+    if (state.tasks.length === 0) {
+      listBody = h("div", { class: "empty-state" }, "La lista de tareas está vacía.", h("br"), "Anoten lo que hay que hacer en casa esta semana.");
+    } else {
+      listBody = h("div", {},
+        pending.length === 0 && done.length === 0 ? h("div", { class: "empty-state" }, "Nada para hoy en la lista de tareas.") : null,
+        ...pending.map((t) => taskRow(t, false)),
+        done.length > 0 ? h("div", { style: { marginTop: "1.25rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Hechas hoy") : null,
+        ...done.map((t) => taskRow(t, true)),
+        notToday.length > 0 ? h("div", { style: { marginTop: "1.5rem", fontSize: "0.78rem", color: "var(--ink-muted)", marginBottom: "0.5rem" } }, "Programadas para otros días") : null,
+        ...notToday.map((t) => h("div", { class: "list-row", style: { "--row-color": colorFor(t.createdBy), opacity: "0.65" } },
+          h("div", { class: "row-main" }, h("div", { class: "row-title" }, t.title), h("div", { class: "row-meta" }, ...rowMeta(t))),
+          h("button", { class: "icon-btn", onClick: () => remove(t.id) }, TrashIcon(15))
+        ))
+      );
+    }
+
+    return h("div", {}, notifBanner, form, listBody);
+  }
+
+  
+  /* ---------- Modal de Timbre / Avisos Rápidos a la Casa ---------- */
+  function buildBellModal() {
+    const customMsgInput = h("input", { id: "input-custom-bell", placeholder: "Escribí un mensaje personalizado…", style: { flex: "1" } });
+    const sendCustomBtn = h("button", { class: "primary-btn", style: { padding: "0.55rem 0.9rem" } }, "Enviar");
+    
+    const sendCustom = () => {
+      const val = customMsgInput.value.trim();
+      if (!val) return;
+      resetFormFields("input-custom-bell");
+      customMsgInput.value = "";
+      sendHouseAlert("custom", val);
+      state.bellModalOpen = false;
+      render();
+    };
+    sendCustomBtn.addEventListener("click", sendCustom);
+    customMsgInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendCustom(); });
+
+    const quickOptions = [
+      { text: "🔔 ¡Ding-dong! Te llamo desde la otra habitación", type: "bell" },
+      { text: "🍽️ ¡La comida está lista para comer!", type: "food" },
+      { text: "❤️ ¿Qué hacemos hoy? Miremos Citas y Planes", type: "date" },
+      { text: "🛒 ¿Falta comprar algo más para casa?", type: "shop" },
+      { text: "🎲 ¡Te toca a vos girar la ruleta!", type: "roulette" }
+    ];
+
+    const quickList = h("div", { class: "bell-quick-list" },
+      ...quickOptions.map((opt) => h("button", {
+        class: "bell-quick-item",
+        onClick: () => {
+          sendHouseAlert(opt.type, opt.text);
+          state.bellModalOpen = false;
+          render();
+        }
+      }, opt.text))
+    );
+
+    return h("div", { class: "bell-modal-backdrop", onClick: () => { state.bellModalOpen = false; render(); } },
+      h("div", { class: "bell-modal", onClick: (e) => e.stopPropagation() },
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" } },
+          h("h3", { style: { fontFamily: "Fraunces, serif", fontSize: "1.2rem" } }, "Avisar a la casa"),
+          h("button", { class: "drawer-close", style: { display: "block" }, onClick: () => { state.bellModalOpen = false; render(); } }, XIcon(18))
+        ),
+        h("p", { style: { fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0 0 0.8rem" } },
+          "Mandale una alerta sonora instantánea a tu pareja en el otro celular:"
+        ),
+        quickList,
+        h("div", { style: { borderTop: "1px solid var(--line)", paddingTop: "0.85rem", marginTop: "0.5rem" } },
+          h("label", { style: { fontSize: "0.75rem", color: "var(--ink-muted)", display: "block", marginBottom: "0.35rem" } }, "O mandar un mensaje personalizado:"),
+          h("div", { style: { display: "flex", gap: "0.4rem" } }, customMsgInput, sendCustomBtn)
+        )
+      )
+    );
+  }
+
+  /* ---------- tab: citas y planes ---------- */
+  let rouletteAngle = 0;
+  let animFrameId = null;
+
+  function buildCitasTab() {
+    // Sub-pestañas: 'indeciso' (Ruleta) y 'sin_ideas' (Catálogo)
+    const subtabs = h("div", { class: "subtabs" },
+      h("button", {
+        class: "subtab-btn" + (state.citasSubTab === "indeciso" ? " active" : ""),
+        onClick: () => {
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          state.isSpinning = false;
+          state.citasSubTab = "indeciso";
+          render();
+        }
+      }, DicesIcon(14), " Indeciso (Ruleta)"),
+      h("button", {
+        class: "subtab-btn" + (state.citasSubTab === "sin_ideas" ? " active" : ""),
+        onClick: () => {
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          state.isSpinning = false;
+          state.citasSubTab = "sin_ideas";
+          render();
+        }
+      }, SparklesIcon(14), ` Sin ideas (${(state.datesPlans || []).length})`)
+    );
+
+    let content;
+    if (state.citasSubTab === "indeciso") {
+      content = buildIndecisoSubTab();
+    } else {
+      content = buildSinIdeasSubTab();
+    }
+
+    return h("div", {}, subtabs, content);
+  }
+
+  /* --- Sub-pestaña: Indeciso (Ruleta) --- */
+  function buildIndecisoSubTab() {
+    const opts = state.rouletteOptions || ["Cena en casa", "Salir a comer", "Paseo y helado", "Noche de pelis"];
+    
+    // Plantillas rápidas
+    const presets = [
+      { label: "🍕 ¿Qué comemos?", items: ["Pizza casera", "Sushi", "Hamburguesas", "Cocinar en casa", "Empanadas"] },
+      { label: "🎬 ¿Qué vemos?", items: ["Comedia", "Terror o misterio", "Serie pendiente", "Documental", "Elegir al azar"] },
+      { label: "🌆 Planes de finde", items: ["Paseo y heladería", "Bar o café nuevo", "Picnic al parque", "Cine", "Quedarse en la cama"] }
+    ];
+
+    const presetRow = h("div", { style: { display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "1rem" } },
+      ...presets.map((p) => h("button", {
+        class: "subtab-btn",
+        style: { fontSize: "0.78rem", padding: "0.3rem 0.65rem" },
+        disabled: state.isSpinning,
+        onClick: () => {
+          if (state.isSpinning) return;
+          state.rouletteOptions = [...p.items];
+          state.rouletteWinner = null;
+          render();
+        }
+      }, p.label)),
+      (state.datesPlans && state.datesPlans.length >= 2) ? h("button", {
+        class: "subtab-btn",
+        style: { fontSize: "0.78rem", padding: "0.3rem 0.65rem", background: "var(--surface-muted)" },
+        disabled: state.isSpinning,
+        onClick: () => {
+          if (state.isSpinning) return;
+          const shuffled = [...state.datesPlans].sort(() => 0.5 - Math.random());
+          state.rouletteOptions = shuffled.slice(0, Math.min(5, shuffled.length)).map((p) => p.title);
+          state.rouletteWinner = null;
+          render();
+        }
+      }, "💡 Cargar de 'Sin ideas'") : null
+    );
+
+    // Controles de opciones (entre 2 y 6)
+    const newOptInput = h("input", { id: "input-new-option", placeholder: "Agregar opción (ej: Paseo al río)…", style: { flex: "1" }, disabled: state.isSpinning });
+    const addOptBtn = h("button", { class: "add-btn", disabled: opts.length >= 6 || state.isSpinning }, PlusIcon(14), " Sumar");
+    
+    const addOption = () => {
+      if (state.isSpinning) return;
+      const val = newOptInput.value.trim();
+      if (!val || opts.length >= 6) return;
+      resetFormFields("input-new-option");
+      newOptInput.value = "";
+      state.rouletteOptions = [...opts, val];
+      state.rouletteWinner = null;
+      render();
+    };
+    addOptBtn.addEventListener("click", addOption);
+    newOptInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addOption(); });
+
+    const optionsList = h("div", { style: { display: "flex", flexWrap: "wrap", gap: "0.4rem", margin: "0.6rem 0 1rem" } },
+      ...opts.map((opt, i) => {
+        const color = PALETTE[i % PALETTE.length];
+        return h("div", {
+          style: {
+            display: "inline-flex", alignItems: "center", gap: "0.4rem",
+            background: "var(--surface)", border: "1px solid var(--line)",
+            borderLeft: `4px solid ${color}`, borderRadius: "8px", padding: "0.35rem 0.65rem",
+            fontSize: "0.85rem", color: "var(--ink)"
+          }
+        },
+          h("span", {}, opt),
+          opts.length > 2 ? h("button", {
+            class: "icon-btn",
+            style: { padding: "0.1rem" },
+            disabled: state.isSpinning,
+            onClick: () => {
+              if (state.isSpinning) return;
+              state.rouletteOptions = opts.filter((_, idx) => idx !== i);
+              state.rouletteWinner = null;
+              render();
+            }
+          }, XIcon(12)) : null
+        );
+      })
+    );
+
+    // Canvas de la ruleta (resolución Retina 580x580 para nitidez máxima en 290x290)
+    const canvas = h("canvas", {
+      id: "roulette-canvas",
+      width: "580",
+      height: "580",
+      style: { width: "290px", height: "290px", borderRadius: "50%", display: "block" }
+    });
+    const needle = h("div", { class: "needle" });
+    const spinBtn = h("button", {
+      id: "roulette-spin-btn",
+      class: "primary-btn roulette-spin-btn",
+      disabled: state.isSpinning
+    }, state.isSpinning ? "…" : "GIRAR");
+
+    // Función inteligente de ajuste de texto: adapta tamaño y trunca elegantemente para evitar
+    // que cualquier letra sea tapada por el botón central o sobresalga del borde exterior.
+    const fitWheelText = (ctx, text, maxWidth) => {
+      ctx.font = "bold 12px 'Inter', -apple-system, sans-serif";
+      if (ctx.measureText(text).width <= maxWidth) return { text, font: ctx.font };
+      ctx.font = "bold 11px 'Inter', -apple-system, sans-serif";
+      if (ctx.measureText(text).width <= maxWidth) return { text, font: ctx.font };
+      ctx.font = "bold 10px 'Inter', -apple-system, sans-serif";
+      if (ctx.measureText(text).width <= maxWidth) return { text, font: ctx.font };
+      let t = text;
+      while (t.length > 2 && ctx.measureText(t + "…").width > maxWidth) {
+        t = t.slice(0, -1);
+      }
+      return { text: t.trim() + "…", font: ctx.font };
+    };
+
+    const numOpts = opts.length;
+    const arc = (2 * Math.PI) / numOpts;
+
+    const drawWheel = () => {
+      const activeCanvas = document.getElementById("roulette-canvas") || canvas;
+      if (!activeCanvas) return;
+      const ctx = activeCanvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.save();
+      // Escala 2x para nitidez HD en móviles y pantallas de alta densidad
+      ctx.scale(2, 2);
+      const width = 290;
+      const height = 290;
+      const radius = 145;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Dibujar sectores
+      for (let i = 0; i < numOpts; i++) {
+        const angle = rouletteAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = PALETTE[i % PALETTE.length];
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius - 4, angle, angle + arc, false);
+        ctx.lineTo(radius, radius);
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.stroke();
+
+        // Texto de cada opción
+        // El botón central tiene radio 27px (diámetro 54px) + borde.
+        // La zona radial segura va de r=42px hasta r=132px.
+        // El punto medio radial es r=88px con ancho máximo de 82px.
+        // El texto centrado en r=88px se extiende como máximo entre 47px y 129px,
+        // quedando con más de 17px de margen de separación del botón central.
+        const maxTextWidth = 82;
+        const { text: labelToDraw, font } = fitWheelText(ctx, opts[i], maxTextWidth);
+
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(angle + arc / 2);
+        ctx.font = font;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(labelToDraw, 88, 0);
+        ctx.restore();
+      }
+
+      // Aro exterior decorativo elegante
+      ctx.beginPath();
+      ctx.arc(radius, radius, radius - 3, 0, 2 * Math.PI);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.stroke();
+
+      // Círculo base blanco bajo el botón central para terminación limpia
+      ctx.beginPath();
+      ctx.arc(radius, radius, 30, 0, 2 * Math.PI);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Función matemática para identificar qué sector queda bajo la aguja superior (3*PI/2)
+    const getSliceAtNeedle = (angle, count) => {
+      const sliceArc = (2 * Math.PI) / count;
+      const norm = ((3 * Math.PI / 2 - (angle % (2 * Math.PI))) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      return Math.floor(norm / sliceArc) % count;
+    };
+
+    // Girar la ruleta con física fluida, aceleración inicial y desaceleración natural
+    const spin = () => {
+      if (state.isSpinning || opts.length < 2) return;
+      state.isSpinning = true;
+      state.rouletteWinner = null;
+
+      // Actualizar UI inmediatamente sin recrear el DOM completo
+      const activeBtn = document.getElementById("roulette-spin-btn") || spinBtn;
+      if (activeBtn) {
+        activeBtn.disabled = true;
+        activeBtn.textContent = "…";
+        activeBtn.style.opacity = "0.75";
+      }
+
+      const winnerContainer = document.getElementById("roulette-winner-container");
+      if (winnerContainer) winnerContainer.innerHTML = "";
+
+      // Reactivar contexto de audio si estaba suspendido
+      try {
+        const aCtx = getAudioCtx();
+        if (aCtx && aCtx.state === "suspended") aCtx.resume();
+      } catch (e) {}
+
+      // Mínimo 6 vueltas completas + entre 0 y 2 vueltas adicionales + aterrizaje aleatorio
+      const fullRotations = 6 + Math.floor(Math.random() * 3);
+      const randomOffset = Math.random() * (2 * Math.PI);
+      const totalDelta = fullRotations * (2 * Math.PI) + randomOffset;
+
+      const startAngle = rouletteAngle;
+      const targetAngle = startAngle + totalDelta;
+      const duration = 3800; // 3.8s de giro fluido y entretenido
+      const startTime = performance.now();
+
+      let lastSliceIndex = getSliceAtNeedle(startAngle, numOpts);
+      let lastTickTime = 0;
+
+      // Curva de desaceleración cuártica: arranca con potencia y desacelera suavemente
+      const easeOutQuart = (x) => 1 - Math.pow(1 - x, 4);
+
+      const step = (now) => {
+        if (!state.isSpinning) return;
+
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const eased = easeOutQuart(progress);
+
+        rouletteAngle = startAngle + totalDelta * eased;
+
+        // Sonido de tick cada vez que un sector cruza la aguja superior
+        const currentSlice = getSliceAtNeedle(rouletteAngle, numOpts);
+        if (currentSlice !== lastSliceIndex) {
+          const nowMs = performance.now();
+          if (nowMs - lastTickTime > 40) {
+            playTick();
+            lastTickTime = nowMs;
+          }
+          lastSliceIndex = currentSlice;
+        }
+
+        drawWheel();
+
+        if (progress < 1) {
+          animFrameId = requestAnimationFrame(step);
+        } else {
+          // Detención final perfecta
+          animFrameId = null;
+          state.isSpinning = false;
+          rouletteAngle = targetAngle % (2 * Math.PI);
+          drawWheel();
+
+          const winnerIndex = getSliceAtNeedle(rouletteAngle, numOpts);
+          const winner = opts[winnerIndex] || opts[0];
+          state.rouletteWinner = winner;
+
+          playFanfare();
+          if (window.confetti) {
+            try {
+              window.confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
+            } catch (e) {}
+          }
+          render();
+        }
+      };
+
+      animFrameId = requestAnimationFrame(step);
+    };
+
+    spinBtn.addEventListener("click", spin);
+
+    // Dibujar en el próximo ciclo
+    setTimeout(drawWheel, 10);
+
+    const canvasWrapper = h("div", { class: "canvas-wrapper" }, needle, canvas, spinBtn);
+
+    // Banner de resultado cuando hay un ganador
+    let winnerSection = null;
+    if (state.rouletteWinner) {
+      const winner = state.rouletteWinner;
+      winnerSection = h("div", { class: "winner-banner" },
+        h("div", { style: { fontSize: "0.8rem", color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" } }, "🎉 ¡El plan elegido es!"),
+        h("div", { class: "winner-title" }, `"${winner}"`),
+        h("div", { class: "winner-actions" },
+          h("button", {
+            class: "primary-btn",
+            style: { fontSize: "0.82rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" },
+            onClick: () => {
+              sendHouseAlert("roulette", `🎲 ¡Giré la ruleta en Citas y Planes y salió: "${winner}"!`);
+              alert(`¡Aviso enviado a tu pareja! ("${winner}")`);
+            }
+          }, BellIcon(14), " Avisar a mi pareja"),
+          h("button", {
+            class: "subtab-btn",
+            style: { background: "var(--surface)", color: "var(--ink)", borderColor: "var(--line)" },
+            onClick: () => {
+              saveList(state.house, "events", [...state.events, { id: uid(), title: `Cita: ${winner}`, date: todayISO(), createdBy: state.me.name }]);
+              alert(`Agendado en el Calendario para hoy.`);
+            }
+          }, CalendarIcon(14), " Agendar en Calendario"),
+          h("button", {
+            class: "ghost-btn",
+            style: { padding: "0.45rem 0.75rem", fontSize: "0.82rem" },
+            onClick: () => { state.rouletteWinner = null; spin(); }
+          }, RepeatIcon(14), " Girar de nuevo")
+        )
+      );
+    }
+    const winnerContainer = h("div", { id: "roulette-winner-container", style: { width: "100%", display: "flex", justifyContent: "center" } }, winnerSection);
+
+    return h("div", { class: "roulette-container" },
+      h("div", { style: { width: "100%", maxWidth: "440px" } },
+        h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" } },
+          h("h3", { style: { fontFamily: "Fraunces, serif", fontSize: "1.1rem" } }, "Ruleta de decisión rápida"),
+          h("span", { style: { fontSize: "0.76rem", color: "var(--ink-muted)" } }, `${opts.length} de 6 opciones`)
+        ),
+        h("p", { style: { fontSize: "0.82rem", color: "var(--ink-muted)", margin: "0 0 0.75rem" } },
+          "Ingresen entre 2 y 6 alternativas. La ruleta decide por ustedes sin vueltas:"
+        ),
+        presetRow,
+        optionsList,
+        opts.length < 6 ? h("div", { style: { display: "flex", gap: "0.4rem", marginBottom: "1rem" } }, newOptInput, addOptBtn) : null
+      ),
+      canvasWrapper,
+      winnerContainer
+    );
+  }
+
+  /* --- Sub-pestaña: Sin ideas (Catálogo de Planes + CRUD) --- */
+  function buildSinIdeasSubTab() {
+    const plans = state.datesPlans || [];
+    const filterTag = state.planFilterTag || "Todos";
+    const TAGS = ["Todos", "En casa", "Salida", "Romántico", "Aire libre", "Gastronomía", "Cocina", "Relax"];
+
+    // Formulario para agregar nuevo plan
+    const titleInput = h("input", { id: "input-plan-title", placeholder: "Ej: Picnic nocturno en la terraza", style: { flex: "1" } });
+    const tagSelect = h("select", { id: "input-plan-tag" },
+      h("option", { value: "En casa" }, "En casa"),
+      h("option", { value: "Salida" }, "Salida"),
+      h("option", { value: "Romántico" }, "Romántico"),
+      h("option", { value: "Aire libre" }, "Aire libre"),
+      h("option", { value: "Gastronomía" }, "Gastronomía"),
+      h("option", { value: "Cocina" }, "Cocina"),
+      h("option", { value: "Relax" }, "Relax")
+    );
+    const descInput = h("input", { id: "input-plan-desc", placeholder: "Detalle opcional (ej: llevar manta y snacks)", style: { flex: "1" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(14), " Agregar");
+
+    const updateAdd = () => { addBtn.disabled = !titleInput.value.trim(); };
+    titleInput.addEventListener("input", updateAdd);
+
+    const submitPlan = () => {
+      const title = titleInput.value.trim();
+      if (!title) return;
+      const descVal = descInput.value.trim() || null;
+      const tagVal = tagSelect.value;
+
+      resetFormFields("input-plan-title", "input-plan-desc");
+      titleInput.value = "";
+      descInput.value = "";
+      tagSelect.selectedIndex = 0;
+      addBtn.disabled = true;
+
+      const newPlan = {
+        id: uid(),
+        title: title,
+        tag: tagVal,
+        desc: descVal,
+        createdBy: state.me.name
+      };
+      saveList(state.house, "dates_plans", [newPlan, ...plans]);
+    };
+
+    addBtn.addEventListener("click", submitPlan);
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") descInput.focus(); });
+    descInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !addBtn.disabled) submitPlan(); });
+
+    const addForm = h("div", { class: "entry-form", style: { marginBottom: "1.2rem" } },
+      h("div", { class: "field grow" }, h("label", {}, "Nombre de la idea / plan"), titleInput),
+      h("div", { class: "field" }, h("label", {}, "Tipo de plan"), tagSelect),
+      h("div", { class: "field grow", style: { width: "100%" } }, h("label", {}, "Detalles u observaciones (opcional)"), descInput),
+      addBtn
+    );
+
+    // Filtros por etiqueta
+    const filterPills = h("div", { style: { display: "flex", gap: "0.35rem", overflowX: "auto", paddingBottom: "0.4rem", marginBottom: "0.8rem" } },
+      ...TAGS.map((t) => h("button", {
+        class: "subtab-btn" + (filterTag === t ? " active" : ""),
+        style: { fontSize: "0.78rem", padding: "0.25rem 0.65rem" },
+        onClick: () => { state.planFilterTag = t; render(); }
+      }, t))
+    );
+
+    // Filtrar lista
+    const filtered = filterTag === "Todos" ? plans : plans.filter((p) => p.tag === filterTag);
+
+    // Renderizado de tarjetas de planes
+    const listBody = filtered.length === 0
+      ? h("div", { class: "empty-state" }, "No hay planes con esta categoría.", h("br"), "Agregá uno nuevo arriba para que quede guardado para los dos.")
+      : h("div", {}, ...filtered.map((p) => {
+          const isEditing = state.editingPlan && state.editingPlan.id === p.id;
+          
+          if (isEditing) {
+            const editTitleInput = h("input", { value: state.editingPlan.title, style: { width: "100%", marginBottom: "0.4rem" } });
+            const editDescInput = h("input", { value: state.editingPlan.desc || "", placeholder: "Detalle...", style: { width: "100%", marginBottom: "0.5rem" } });
+            const saveEditBtn = h("button", { class: "primary-btn", style: { padding: "0.35rem 0.75rem", fontSize: "0.8rem" } }, "Guardar");
+            const cancelEditBtn = h("button", { class: "ghost-btn", style: { padding: "0.35rem 0.75rem", fontSize: "0.8rem" }, onClick: () => { state.editingPlan = null; render(); } }, "Cancelar");
+            
+            saveEditBtn.addEventListener("click", () => {
+              const val = editTitleInput.value.trim();
+              if (!val) return;
+              const updated = plans.map((x) => x.id === p.id ? { ...x, title: val, desc: editDescInput.value.trim() || null } : x);
+              saveList(state.house, "dates_plans", updated);
+              state.editingPlan = null;
+            });
+
+            return h("div", { class: "plan-card", style: { flexDirection: "column" } },
+              h("label", { style: { fontSize: "0.75rem", color: "var(--ink-muted)" } }, "Modificar plan:"),
+              editTitleInput,
+              editDescInput,
+              h("div", { style: { display: "flex", gap: "0.4rem" } }, saveEditBtn, cancelEditBtn)
+            );
+          }
+
+          return h("div", { class: "plan-card" },
+            h("div", { class: "plan-card-body" },
+              h("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" } },
+                h("span", { class: "plan-card-title" }, p.title),
+                h("span", { class: "pill good", style: { fontSize: "0.7rem", padding: "0.1rem 0.45rem" } }, p.tag || "Plan")
+              ),
+              p.desc ? h("p", { class: "plan-card-desc" }, p.desc) : null,
+              h("div", { style: { fontSize: "0.72rem", color: "var(--ink-muted)", marginTop: "0.3rem", display: "flex", alignItems: "center", gap: "0.3rem" } },
+                "Agregado por ", h("strong", {}, p.createdBy || "Nido")
+              )
+            ),
+            h("div", { class: "plan-actions" },
+              h("button", {
+                class: "subtab-btn",
+                style: { padding: "0.3rem 0.6rem", fontSize: "0.75rem", background: "var(--surface-muted)" },
+                onClick: () => {
+                  // Cargar en la ruleta e ir directo a la pestaña de ruleta
+                  const cur = state.rouletteOptions || [];
+                  if (!cur.includes(p.title)) {
+                    if (cur.length >= 6) cur.shift(); // Quita una vieja si llegó al límite
+                    state.rouletteOptions = [...cur, p.title];
+                  }
+                  state.citasSubTab = "indeciso";
+                  state.rouletteWinner = null;
+                  render();
+                },
+                title: "Pasar esta idea a la ruleta"
+              }, DicesIcon(13), " A la ruleta"),
+              h("button", {
+                class: "icon-btn",
+                onClick: () => { state.editingPlan = { ...p }; render(); },
+                title: "Editar texto"
+              }, EditIcon(14)),
+              h("button", {
+                class: "icon-btn",
+                onClick: () => {
+                  if (confirm(`¿Eliminar la idea "${p.title}"?`)) {
+                    saveList(state.house, "dates_plans", plans.filter((x) => x.id !== p.id));
+                  }
+                },
+                title: "Eliminar"
+              }, TrashIcon(14))
+            )
+          );
+        }));
+
+    return h("div", {}, addForm, filterPills, listBody);
+  }
+
+  /* ---------- tab: calendario ---------- */
+  function buildCalendarioTab() {
+    const { year, month } = state.calCursor;
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    const isoFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const eventsFor = (iso) => state.events.filter((e) => e.date === iso);
+    const today = todayISO();
+    const changeMonth = (delta) => {
+      let m = month + delta, y = year;
+      if (m < 0) { m = 11; y -= 1; }
+      if (m > 11) { m = 0; y += 1; }
+      state.calCursor = { year: y, month: m };
+      render();
+    };
+    const dayEvents = eventsFor(state.calSelected);
+
+    const titleInput = h("input", { id: "input-cal-title", placeholder: "Agregar algo a este día…", value: "", style: { flex: "1" } });
+    const addBtn = h("button", { class: "add-btn", disabled: true }, PlusIcon(15));
+    const addEvent = () => {
+      if (!titleInput.value.trim()) return;
+      const titleVal = titleInput.value.trim();
+      resetFormFields("input-cal-title");
+      titleInput.value = "";
+      addBtn.disabled = true;
+      saveList(state.house, "events", [...state.events, { id: uid(), title: titleVal, date: state.calSelected, createdBy: state.me.name }]);
+    };
+    titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
+    titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEvent(); });
+    addBtn.addEventListener("click", addEvent);
+    const remove = (id) => saveList(state.house, "events", state.events.filter((e) => e.id !== id));
+
+    const header = h("div", { class: "cal-header" },
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(-1) }, ChevronLeftIcon(16)),
+      h("h3", { style: { fontFamily: "Fraunces, serif", fontSize: "1.1rem", textTransform: "capitalize" } }, `${MESES[month]} ${year}`),
+      h("button", { class: "cal-nav-btn", onClick: () => changeMonth(1) }, ChevronRightIcon(16))
+    );
+
+    const grid = h("div", { class: "cal-grid" },
+      ...DIAS_SEMANA.map((d) => h("div", { class: "cal-dow" }, d)),
+      ...cells.map((d) => {
+        if (d === null) return h("div", { class: "cal-day empty" });
+        const iso = isoFor(d);
+        const dayEvs = eventsFor(iso);
+        return h("button", { class: "cal-day" + (iso === today ? " today" : "") + (iso === state.calSelected ? " selected" : ""), onClick: () => { state.calSelected = iso; render(); } },
+          String(d),
+          h("div", { class: "dots" }, ...dayEvs.slice(0, 3).map((e) => h("span", { class: "dot", style: { background: iso === state.calSelected ? "#fff" : colorFor(e.createdBy) } })))
+        );
+      })
+    );
+
+    const panel = h("div", { class: "day-panel" },
+      h("h3", {}, new Date(state.calSelected + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })),
+      dayEvents.length === 0
+        ? h("p", { style: { color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "1rem" } }, "No hay nada anotado este día.")
+        : h("div", {}, ...dayEvents.map((e) => h("div", { class: "list-row", style: { "--row-color": colorFor(e.createdBy) } },
+            h("div", { class: "row-main" }, h("div", { class: "row-title" }, e.title), h("div", { class: "row-meta" }, h("span", {}, e.createdBy))),
+            h("button", { class: "icon-btn", onClick: () => remove(e.id) }, TrashIcon(15))
+          ))),
+      h("div", { style: { display: "flex", gap: "0.5rem", marginTop: "0.5rem" } }, titleInput, addBtn)
+    );
+
+    return h("div", {}, header, grid, panel);
+  }
+
+  /* ---------- raíz + render ---------- */
+  function buildApp() {
+    if (!fbReady) return buildConfigMissing();
+    if (!state.house || state.houseAuthed !== state.house) return buildHouseScreen();
+    if (!state.me) return buildIdentityGate();
+    return buildHomeApp();
+  }
+
+  const root = document.getElementById("root");
+  function render() {
+    if (state.activeTab !== "citas" || state.citasSubTab !== "indeciso") {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      state.isSpinning = false;
+    } else if (animFrameId && !state.isSpinning) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+    const active = document.activeElement;
+    const activeId = active && active.id ? active.id : null;
+    const selStart = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
+    const selEnd = active && typeof active.selectionEnd === "number" ? active.selectionEnd : null;
+
+    // Cualquier cosa sin confirmar en un campo (id-eado) sobrevive al redibujado,
+    // EXCEPTO los campos marcados explícitamente para reseteo al presionar 'Agregar'.
+    const snapshot = {};
+    root.querySelectorAll("input[id], select[id], textarea[id]").forEach((elx) => {
+      if (inputsToReset.has(elx.id)) return;
+      snapshot[elx.id] = elx.type === "checkbox" || elx.type === "radio" ? { checked: elx.checked } : { value: elx.value };
+    });
+    const justReset = new Set(inputsToReset);
+    inputsToReset.clear();
+
+    pendingAutofocus = null;
+    root.innerHTML = "";
+    root.appendChild(buildApp());
+    document.body.style.overflow = (state.mobileMenuOpen || state.viewingReceipt) ? "hidden" : "";
+
+    for (const id in snapshot) {
+      const again = document.getElementById(id);
+      if (!again) continue;
+      if ("checked" in snapshot[id]) again.checked = snapshot[id].checked;
+      else again.value = snapshot[id].value;
+      again.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    let restored = false;
+    if (activeId && !justReset.has(activeId)) {
+      const again = document.getElementById(activeId);
+      if (again) {
+        again.focus();
+        if (selStart != null && typeof again.setSelectionRange === "function") {
+          try { again.setSelectionRange(selStart, selEnd); } catch (e) {}
+        }
+        restored = true;
+      }
+    }
+    if (!restored && pendingAutofocus) pendingAutofocus.focus();
+  }
+
+  render();
+})();
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

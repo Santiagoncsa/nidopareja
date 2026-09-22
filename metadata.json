@@ -1,0 +1,6 @@
+{
+  "name": "Nuestra Casa - Citas y Planes",
+  "description": "App compartida del hogar con sincronización en tiempo real y notificaciones entre dispositivos de la misma casa, más la nueva categoría Citas y Planes con Ruleta de decisión rápida y catálogo colaborativo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
