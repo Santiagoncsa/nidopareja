@@ -106,7 +106,15 @@ La forma más simple sin instalar nada:
    (no se manda la foto a ningún lado), así que es gratis, pero por eso
    mismo puede equivocarse — siempre revisen los datos antes de guardar.
    La primera vez que lo usan, descarga ~2-5 MB para el lector de texto
-   (conviene hacerlo con wifi); las veces siguientes es más rápido.
+   (conviene hacerlo con wifi); las veces siguientes es más rápido. Además:
+   la foto (comprimida) queda guardada junto al gasto — hay un botón de
+   cámara en cada fila para volver a verla cuando quieran, sin tener que
+   guardar la foto por separado en el celular. La app también intenta
+   adivinar la categoría según el texto del ticket (por ejemplo, si dice
+   "Carrefour" la marca como Supermercado).
+8. Todos los formularios (Gastos, Fondo común, Vencimientos, Tareas,
+   Calendario) se vacían solos después de agregar algo, para no tener que
+   borrar a mano antes de cargar lo siguiente.
 
 ⚠️ **Sobre las notificaciones:** al ser una app web (sin servidor propio),
 los avisos solo se disparan mientras el celular tiene la app abierta o

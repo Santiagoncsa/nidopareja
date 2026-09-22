@@ -64,6 +64,8 @@
 
   .mobile-topbar { display: none; }
   .drawer-backdrop { display: none; }
+  .receipt-modal-backdrop { position: fixed; inset: 0; background: rgba(20, 24, 16, 0.6); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+  .receipt-modal { background: var(--bg); border-radius: 14px; padding: 0.9rem; max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
 
   .main { flex: 1; padding: 2rem 2.5rem; max-width: 900px; }
   .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; }
@@ -324,21 +326,44 @@
     ocrProgressCb = null;
     return data.text || "";
   }
-  // Convierte números en formato argentino ("1.234,56" o "1234,56") a Number.
+  // Convierte números en formato argentino ("1.234,56", "12.500" o "1234,56") a Number.
   function parseArNumber(str) {
     let s = String(str).replace(/[^\d.,]/g, "");
-    if (s.includes(".") && s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
-    else if (s.includes(",")) s = s.replace(",", ".");
-    else {
+    if (s.includes(".") && s.includes(",")) {
+      // Los dos separadores presentes: el punto siempre es de miles, la coma es decimal.
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else if (s.includes(",")) {
+      // Solo coma: es el separador decimal.
+      s = s.replace(",", ".");
+    } else if (s.includes(".")) {
       const parts = s.split(".");
-      if (parts.length > 2) s = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
+      const last = parts[parts.length - 1];
+      if (parts.length > 2 || last.length === 3) {
+        // Más de un punto, o un solo punto seguido de 3 dígitos: son separadores de miles ("12.500" = 12500).
+        s = parts.join("");
+      }
+      // Un solo punto seguido de 1-2 dígitos ("12.5" o "12.50"): se interpreta como decimal, se deja igual.
     }
     return parseFloat(s);
   }
-  // Heurísticas simples para adivinar monto, fecha y descripción a partir del texto leído.
+  // Heurísticas simples para adivinar monto, fecha, descripción y categoría a partir del texto leído.
+  const CATEGORY_KEYWORDS = [
+    { cat: "Supermercado", words: ["supermercado", "market", "almacen", "hipermercado", "carrefour", "coto", "dia %", "disco", "jumbo", "chino", "verduleria", "carniceria", "kiosco"] },
+    { cat: "Salidas", words: ["restaurant", "resto", "bar ", "cafeteria", "pizzeria", "heladeria", "cine", "boliche", "delivery", "pedidosya", "rappi", "parrilla"] },
+    { cat: "Expensas/Servicios", words: ["expensas", "edenor", "edesur", "metrogas", "aysa", "telecom", "movistar", "personal", "claro", "internet", "consorcio", "abl", " gas ", "factura de servicio"] },
+    { cat: "Alquiler", words: ["alquiler", "inmobiliaria", " renta "] },
+  ];
+  function guessCategory(text) {
+    const norm = " " + text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") + " ";
+    for (const group of CATEGORY_KEYWORDS) {
+      if (group.words.some((w) => norm.includes(w))) return group.cat;
+    }
+    return null;
+  }
   function extractInvoiceData(rawText) {
     const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const numberPattern = /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}/g;
+    // Montos agrupados de a 3 (miles) con o sin decimales, o números sueltos con hasta 2 decimales.
+    const numberPattern = /\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
     const totalKeywords = /total|importe|monto|a\s*pagar/i;
     let amount = null;
     for (const line of lines) {
@@ -366,7 +391,30 @@
     for (const line of lines.slice(0, 6)) {
       if (/[a-zA-ZÀ-ÿ]{3,}/.test(line) && !/^\d+$/.test(line)) { desc = line.slice(0, 60); break; }
     }
-    return { amount, date, desc };
+    const category = guessCategory(rawText);
+    return { amount, date, desc, category };
+  }
+
+  // Comprime una foto de ticket a JPEG chico (para poder guardarla junto al gasto sin pesar de más).
+  function compressImageFile(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo procesar la imagen.")); };
+      img.src = url;
+    });
   }
 
   /* ---------- notificaciones locales para actividades con horario ---------- */
@@ -438,6 +486,7 @@
     houseGateBusy: false,
     houseGateError: null,
     mobileMenuOpen: false,
+    viewingReceipt: null,
   };
   let pendingAutofocus = null;
 
@@ -682,7 +731,14 @@
       tabContent
     );
 
-    return h("div", { class: "nido" }, backdrop, mobileTopbar, sidebar, main);
+    const receiptModal = !state.viewingReceipt ? null : h("div", { class: "receipt-modal-backdrop", onClick: () => { state.viewingReceipt = null; render(); } },
+      h("div", { class: "receipt-modal", onClick: (e) => e.stopPropagation() },
+        h("button", { class: "drawer-close", style: { display: "flex", marginLeft: "auto" }, onClick: () => { state.viewingReceipt = null; render(); } }, XIcon(20)),
+        h("img", { src: state.viewingReceipt, alt: "Ticket", style: { maxWidth: "100%", maxHeight: "78vh", borderRadius: "10px", display: "block" } })
+      )
+    );
+
+    return h("div", { class: "nido" }, backdrop, mobileTopbar, sidebar, main, receiptModal);
   }
 
   /* ---------- tab: gastos ---------- */
@@ -701,6 +757,14 @@
     const ocrInput = h("input", { type: "file", accept: "image/*", capture: "environment", style: { display: "none" } });
     const ocrBtn = h("button", { type: "button", class: "add-btn", style: { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--line)" } }, CameraIcon(15), " Escanear factura");
     const ocrStatus = h("div", { class: "helper-text", style: { display: "none", marginTop: "0.5rem", marginBottom: "0" } });
+    const photoThumb = h("img", { style: { width: "42px", height: "42px", objectFit: "cover", borderRadius: "6px", border: "1px solid var(--line)" } });
+    const removePhotoBtn = h("button", { class: "icon-btn", type: "button" }, XIcon(13));
+    const photoPreview = h("div", { style: { display: "none", alignItems: "center", gap: "0.5rem", marginTop: "0.6rem" } },
+      photoThumb, h("span", { style: { fontSize: "0.78rem", color: "var(--ink-muted)" } }, "Foto del ticket adjunta"), removePhotoBtn
+    );
+    let pendingReceiptPhoto = null;
+    removePhotoBtn.addEventListener("click", () => { pendingReceiptPhoto = null; photoPreview.style.display = "none"; });
+
     ocrBtn.addEventListener("click", () => ocrInput.click());
     ocrInput.addEventListener("change", async () => {
       const file = ocrInput.files[0];
@@ -708,6 +772,12 @@
       ocrBtn.disabled = true;
       ocrStatus.style.display = "block";
       ocrStatus.style.color = "";
+      ocrStatus.textContent = "Guardando la foto…";
+      try {
+        pendingReceiptPhoto = await compressImageFile(file, 1000, 0.6);
+        photoThumb.src = pendingReceiptPhoto;
+        photoPreview.style.display = "flex";
+      } catch (e) { /* si falla la compresión seguimos igual con la lectura de texto */ }
       ocrStatus.textContent = "Descargando el lector (solo la primera vez)…";
       try {
         const text = await runOcr(file, (pct) => { ocrStatus.textContent = `Leyendo la factura… ${pct}%`; });
@@ -715,13 +785,14 @@
         if (data.desc) { descInput.value = data.desc; descInput.dispatchEvent(new Event("input", { bubbles: true })); }
         if (data.amount != null) { amountInput.value = data.amount; amountInput.dispatchEvent(new Event("input", { bubbles: true })); }
         if (data.date) { dateInput.value = data.date; dateInput.dispatchEvent(new Event("input", { bubbles: true })); }
+        if (data.category) categorySelect.value = data.category;
         updateAddBtn();
         ocrStatus.textContent = (data.amount != null || data.date || data.desc)
           ? "Listo. Revisá los datos antes de guardar — la lectura automática puede equivocarse."
-          : "No pude reconocer datos en la foto. Cargalos a mano.";
+          : "No pude reconocer datos en la foto, pero quedó guardada para revisarla después. Cargá los datos a mano.";
       } catch (e) {
         ocrStatus.style.color = "var(--bad)";
-        ocrStatus.textContent = e.message || "No se pudo leer la factura. Cargá los datos a mano.";
+        ocrStatus.textContent = (pendingReceiptPhoto ? "No pude leer el texto, pero la foto quedó guardada. " : "") + (e.message || "No se pudo leer la factura. Cargá los datos a mano.");
       } finally {
         ocrBtn.disabled = false;
         ocrInput.value = "";
@@ -733,11 +804,14 @@
       const amount = Number(amountInput.value);
       const fromFund = fundCheckbox.checked;
       const fundTxId = fromFund ? uid() : null;
-      const entry = { id: uid(), desc: descInput.value.trim(), amount, category: categorySelect.value, date: dateInput.value, paidBy: fromFund ? FUND_PAYER : state.me.name, loggedBy: state.me.name, fromFund, fundTxId };
+      const entry = { id: uid(), desc: descInput.value.trim(), amount, category: categorySelect.value, date: dateInput.value, paidBy: fromFund ? FUND_PAYER : state.me.name, loggedBy: state.me.name, fromFund, fundTxId, receiptPhoto: pendingReceiptPhoto };
       saveList(state.house, "expenses", [entry, ...state.expenses]);
       if (fromFund) {
         saveList(state.house, "fund", [{ id: fundTxId, type: "gasto", amount, desc: entry.desc, createdBy: state.me.name, date: dateInput.value }, ...state.fund]);
       }
+      descInput.value = ""; amountInput.value = ""; categorySelect.selectedIndex = 0; dateInput.value = todayISO(); fundCheckbox.checked = false;
+      pendingReceiptPhoto = null; photoPreview.style.display = "none"; ocrStatus.style.display = "none";
+      updateAddBtn();
     });
 
     const totals = {};
@@ -762,7 +836,7 @@
     );
 
     const scanBlock = h("div", { style: { marginBottom: "1rem" } },
-      ocrBtn, ocrInput, ocrStatus
+      ocrBtn, ocrInput, ocrStatus, photoPreview
     );
 
     const form = h("div", { class: "entry-form" },
@@ -786,6 +860,7 @@
             )
           ),
           h("div", { class: "row-amount" }, money(e.amount)),
+          e.receiptPhoto ? h("button", { class: "icon-btn", title: "Ver ticket", onClick: () => { state.viewingReceipt = e.receiptPhoto; render(); } }, CameraIcon(15)) : null,
           h("button", { class: "icon-btn", onClick: () => {
             saveList(state.house, "expenses", state.expenses.filter((x) => x.id !== e.id));
             if (e.fromFund && e.fundTxId) saveList(state.house, "fund", state.fund.filter((f) => f.id !== e.fundTxId));
@@ -810,6 +885,8 @@
       if (!descInput.value.trim() || !amountInput.value) return;
       const entry = { id: uid(), type: typeSelect.value, amount: Number(amountInput.value), desc: descInput.value.trim(), createdBy: state.me.name, date: todayISO() };
       saveList(state.house, "fund", [entry, ...state.fund]);
+      descInput.value = ""; amountInput.value = ""; typeSelect.selectedIndex = 0;
+      updateAddBtn();
     });
 
     const balanceCard = h("div", { class: "summary-card", style: { maxWidth: "320px", marginBottom: "1.5rem" } },
@@ -854,6 +931,8 @@
       if (!titleInput.value.trim() || !dateInput.value) return;
       const entry = { id: uid(), title: titleInput.value.trim(), amount: amountInput.value ? Number(amountInput.value) : null, dueDate: dateInput.value, category: categorySelect.value, recurring: recurringCheckbox.checked, paid: false, createdBy: state.me.name };
       saveList(state.house, "dues", [...state.dues, entry].sort((a, b) => a.dueDate.localeCompare(b.dueDate)));
+      titleInput.value = ""; amountInput.value = ""; dateInput.value = todayISO(); categorySelect.selectedIndex = 0; recurringCheckbox.checked = false;
+      addBtn.disabled = true;
     });
 
     const togglePaid = (id) => {
@@ -960,6 +1039,10 @@
       };
       saveList(state.house, "tasks", [entry, ...state.tasks]);
       if (timeStartInput.value && notifSupported && Notification.permission === "default") requestNotifPermission();
+      titleInput.value = ""; assigneeSelect.selectedIndex = 0; frequencySelect.selectedIndex = 0;
+      timeStartInput.value = ""; timeEndInput.value = ""; daysWrap.style.display = "none";
+      dayCheckboxes.forEach((lbl) => { const cb = lbl.querySelector("input"); cb.checked = false; lbl.classList.remove("checked"); });
+      updateAddBtn();
     };
     addBtn.addEventListener("click", add);
     updateAddBtn();
@@ -1053,6 +1136,8 @@
     const addEvent = () => {
       if (!titleInput.value.trim()) return;
       saveList(state.house, "events", [...state.events, { id: uid(), title: titleInput.value.trim(), date: state.calSelected, createdBy: state.me.name }]);
+      titleInput.value = "";
+      addBtn.disabled = true;
     };
     titleInput.addEventListener("input", () => { addBtn.disabled = !titleInput.value.trim(); });
     titleInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEvent(); });
@@ -1118,7 +1203,7 @@
     pendingAutofocus = null;
     root.innerHTML = "";
     root.appendChild(buildApp());
-    document.body.style.overflow = state.mobileMenuOpen ? "hidden" : "";
+    document.body.style.overflow = (state.mobileMenuOpen || state.viewingReceipt) ? "hidden" : "";
 
     for (const id in snapshot) {
       const again = document.getElementById(id);
